@@ -1,0 +1,49 @@
+name: aether
+
+services:
+  storage:
+    image: quay.io/minio/minio:RELEASE.2025-02-28T09-55-16Z
+    volumes:
+      - storage_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: ["server", "/data", "--console-address", ":9001"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    env_file:
+      - .env
+
+  database:
+    image: postgres:15-alpine
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - database 
+
+volumes:
+  storage_data:
+  database_data:
+  pgadmin_data:
