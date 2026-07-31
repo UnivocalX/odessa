@@ -25,7 +25,7 @@ func HandleGetOriginScan(svc *service.Service) http.HandlerFunc {
 
 		}
 
-		task, err := svc.RetriveTask(r.Context(), uint(id))
+		task, err := svc.RetrieveTask(r.Context(), uint(id))
 		if err != nil {
 			utils.HandleError(w, r, err)
 			return

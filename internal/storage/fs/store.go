@@ -10,14 +10,55 @@ import (
 )
 
 func (s *Store) abs(location string) (string, error) {
+	root, err := filepath.Abs(s.root)
+	if err != nil {
+		return "", err
+	}
+
 	if strings.HasPrefix(location, "file://") {
 		u, err := url.Parse(location)
 		if err != nil {
 			return "", err
 		}
+		if u.Host != "" && u.Host != "localhost" {
+			return "", os.ErrPermission
+		}
 		location = u.Path
 	}
-	return filepath.Join(s.root, location), nil
+
+	location = filepath.Clean(filepath.FromSlash(location))
+	location = strings.TrimLeft(location, string(filepath.Separator))
+	path := filepath.Join(root, location)
+	rel, err := filepath.Rel(root, path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", os.ErrPermission
+	}
+
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", err
+	}
+	probe := path
+	for {
+		resolvedPath, resolveErr := filepath.EvalSymlinks(probe)
+		if resolveErr == nil {
+			rel, relErr := filepath.Rel(resolvedRoot, resolvedPath)
+			if relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				return "", os.ErrPermission
+			}
+			break
+		}
+		if !os.IsNotExist(resolveErr) {
+			return "", resolveErr
+		}
+		parent := filepath.Dir(probe)
+		if parent == probe {
+			break
+		}
+		probe = parent
+	}
+
+	return path, nil
 }
 
 func (s *Store) Get(ctx context.Context, location string) (io.ReadCloser, error) {
@@ -58,7 +99,7 @@ func (s *Store) Available(ctx context.Context, location string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	
+
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return false, nil

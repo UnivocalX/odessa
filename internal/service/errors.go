@@ -20,4 +20,7 @@ var (
 
 	// ErrNotFound is returned when the requested resource does not exist.
 	ErrNotFound = errors.New("not found")
+
+	// ErrInvalidCredentials is returned when login credentials are invalid.
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )

@@ -8,11 +8,6 @@ CREATE TABLE IF NOT EXISTS locations (
     uri         TEXT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_locations_deleted_at
-    ON locations(deleted_at);
-
-CREATE INDEX IF NOT EXISTS idx_locations_blob_id
-    ON locations(blob_id);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_locations_blob_id_uri
-    ON locations(blob_id, uri);
+CREATE INDEX IF NOT EXISTS idx_locations_deleted_at ON locations(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_locations_blob_id ON locations(blob_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_locations_blob_id_uri ON locations(blob_id, uri);

@@ -2,7 +2,7 @@ addr: ":9090"
 
 storage:
   fs:
-    root: "/data"
+    disabled: true
 
   s3:
     disabled: false

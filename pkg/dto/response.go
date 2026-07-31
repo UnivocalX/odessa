@@ -4,6 +4,13 @@ type Response struct {
 	Message string `json:"message,omitempty"`
 }
 
+type LoginResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 type ErrorResponse struct {
 	Response
 	Error string `json:"error,omitempty"`

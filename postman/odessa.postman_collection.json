@@ -1,0 +1,173 @@
+{
+  "info": {
+    "_postman_id": "3a6f3d42-9e93-4c2e-9c2d-odessa-api",
+    "name": "Odessa API",
+    "description": "Postman collection for the Odessa API. Run Signup or Login first; the login and refresh tests store tokens in the active environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:9090" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "origin_id", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/api/health", "host": [ "{{base_url}}" ], "path": [ "api", "health" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Sign up",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Odessa User\",\n  \"email\": \"user@example.com\",\n  \"password\": \"change-me-123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/signup", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "signup" ] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('Login succeeded', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "if (body.access_token) { pm.environment.set('access_token', body.access_token); pm.collectionVariables.set('access_token', body.access_token); }", "if (body.refresh_token) { pm.environment.set('refresh_token', body.refresh_token); pm.collectionVariables.set('refresh_token', body.refresh_token); }" ] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"change-me-123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/login", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "login" ] }
+          }
+        },
+        {
+          "name": "Refresh session",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('Refresh succeeded', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "if (body.access_token) { pm.environment.set('access_token', body.access_token); pm.collectionVariables.set('access_token', body.access_token); }", "if (body.refresh_token) { pm.environment.set('refresh_token', body.refresh_token); pm.collectionVariables.set('refresh_token', body.refresh_token); }" ] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/refresh", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "refresh" ] }
+          }
+        },
+        {
+          "name": "Request password reset",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/password/reset/request", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "password", "reset", "request" ] }
+          }
+        },
+        {
+          "name": "Confirm password reset",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"paste-reset-token-here\",\n  \"password\": \"new-password-123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/password/reset/confirm", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "password", "reset", "confirm" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Account",
+      "item": [
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"current_password\": \"change-me-123\",\n  \"new_password\": \"new-password-123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/password/change", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "password", "change" ] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/logout", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "logout" ] }
+          }
+        },
+        {
+          "name": "Disable account",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"password\": \"change-me-123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/auth/account/disable", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "account", "disable" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Origins and scans",
+      "item": [
+        {
+          "name": "List origins",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "url": { "raw": "{{base_url}}/api/v1/origins", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins" ] }
+          }
+        },
+        {
+          "name": "Register origin",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('Origin request succeeded', function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });" ] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"uri\": \"https://example.com/data\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/origins", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins" ] }
+          }
+        },
+        {
+          "name": "Create origin scan task",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "const body = pm.response.json();", "if (body.id) pm.environment.set('task_id', body.id);" ] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "url": { "raw": "{{base_url}}/api/v1/origins/{{origin_id}}/scan", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins", "{{origin_id}}", "scan" ] }
+          }
+        },
+        {
+          "name": "Get origin scan task",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "url": { "raw": "{{base_url}}/api/v1/origins/{{origin_id}}/scan", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins", "{{origin_id}}", "scan" ] }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -38,6 +38,13 @@ func RespondInternalError(w http.ResponseWriter, r *http.Request) {
 	Respond(w, r, http.StatusInternalServerError, dto.Response{Message: "internal server error"})
 }
 
+func RespondUnauthorized(w http.ResponseWriter, r *http.Request, message string) {
+	Respond(w, r, http.StatusUnauthorized, dto.ErrorResponse{
+		Response: dto.Response{Message: "unauthorized"},
+		Error:    message,
+	})
+}
+
 func RespondConflict(w http.ResponseWriter, r *http.Request, e error) {
 	Respond(w, r, http.StatusConflict, dto.ErrorResponse{
 		Response: dto.Response{Message: "conflict"},
@@ -56,6 +63,11 @@ func HandleError(w http.ResponseWriter, r *http.Request, err error) {
 		RespondBadRequest(w, r, err)
 	case errors.Is(err, service.ErrAlreadyExists):
 		RespondConflict(w, r, err)
+	case errors.Is(err, service.ErrInvalidCredentials):
+		Respond(w, r, http.StatusUnauthorized, dto.ErrorResponse{
+			Response: dto.Response{Message: "unauthorized"},
+			Error:    err.Error(),
+		})
 	default:
 		RespondInternalError(w, r)
 	}

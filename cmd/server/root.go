@@ -8,10 +8,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/UnivocalX/odessa/internal/server"
 	"github.com/UnivocalX/odessa/internal/repository"
+	"github.com/UnivocalX/odessa/internal/server"
+	"github.com/UnivocalX/odessa/internal/service"
 	"github.com/UnivocalX/odessa/internal/storage"
 
 	_ "github.com/UnivocalX/odessa/internal/storage/azure"
@@ -22,6 +22,16 @@ import (
 )
 
 var configFile string
+
+func newEmailSender(cfg SMTPConfig) service.EmailSender {
+	if cfg.Host == "" || cfg.From == "" {
+		return nil
+	}
+	return service.NewSMTPEmailSender(service.SMTPConfig{
+		Host: cfg.Host, Port: cfg.Port, Username: cfg.Username,
+		Password: cfg.Password.Expose(), From: cfg.From,
+	})
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "server",
@@ -42,7 +52,24 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("configure storage: %w", err)
 		}
 
-		srv := server.New(cfg.Addr, repo, storage.Default())
+		srv := server.New(repo, storage.Default(), server.Config{
+			Addr: cfg.Addr,
+			HTTP: server.Options{
+				ReadTimeout:         cfg.HTTP.ReadTimeout,
+				WriteTimeout:        cfg.HTTP.WriteTimeout,
+				IdleTimeout:         cfg.HTTP.IdleTimeout,
+				MaxHeaderBytes:      cfg.HTTP.MaxHeaderBytes,
+				MaxRequestBodyBytes: cfg.HTTP.MaxRequestBodyBytes,
+			},
+			Auth: service.AuthOptions{
+				JWTSecret:            cfg.Auth.JWTSecret,
+				AccessTokenLifetime:  cfg.Auth.AccessTokenLifetime,
+				RefreshTokenLifetime: cfg.Auth.RefreshTokenLifetime,
+				ResetTokenLifetime:   cfg.Auth.ResetTokenLifetime,
+				PasswordResetURL:     cfg.Auth.PasswordResetURL,
+				EmailSender:          newEmailSender(cfg.Email.SMTP),
+			},
+		})
 
 		go func() {
 			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -59,7 +86,7 @@ var rootCmd = &cobra.Command{
 
 		slog.Info("shutting down...")
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout)
 		defer cancel()
 
 		if err := srv.Shutdown(ctx); err != nil {
