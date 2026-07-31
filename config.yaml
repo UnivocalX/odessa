@@ -1,19 +1,16 @@
-addr: ":8080"
-
-dsn: "postgres://postgres:postgres@database:5432/odessa?sslmode=disable"
-
-auth:
-  jwt_secret: "change-me"
+addr: ":9090"
 
 storage:
   fs:
     root: "/data"
 
   s3:
+    disabled: false
     region: "us-east-1"
-    endpoint: "http://storage:9000"
+    endpoint: "http://localhost:9000"
 
   azure:
+    disabled: true
     account: ""
     connection_string: ""
     account_key: ""

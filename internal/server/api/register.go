@@ -34,8 +34,8 @@ func Register(mux *http.ServeMux, svc *service.Service) http.Handler {
 	})
 
 	mux.HandleFunc(Route(http.MethodGet, "health"), handlers.HandleHealth)
-	mux.HandleFunc(V1Route(http.MethodPost, "origins"), v1handlers.HandlePostOrigin(svc))
 	mux.HandleFunc(V1Route(http.MethodGet, "origins"), v1handlers.HandleListOrigins(svc))
+	mux.HandleFunc(V1Route(http.MethodPost, "origins"), v1handlers.HandlePostOrigin(svc))
 	mux.HandleFunc(V1Route(http.MethodPost, "origins/{id}/scan"), v1handlers.HandlePostOriginScan(svc))
 	mux.HandleFunc(V1Route(http.MethodGet, "origins/{id}/scan"), v1handlers.HandleGetOriginScan(svc))
 

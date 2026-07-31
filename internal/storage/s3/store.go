@@ -76,9 +76,14 @@ func (s *Store) Available(ctx context.Context, location string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, err = s.client.HeadObject(ctx, &awss3.HeadObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+
+	// Origins represent buckets or prefixes, not necessarily individual
+	// objects. HeadObject cannot be used here because a bucket-only origin has
+	// an empty key and S3 does not allow an empty HeadObject key.
+	result, err := s.client.ListObjectsV2(ctx, &awss3.ListObjectsV2Input{
+		Bucket:  aws.String(bucket),
+		Prefix:  aws.String(key),
+		MaxKeys: aws.Int32(1),
 	})
 	if err != nil {
 		if isNotFound(err) {
@@ -86,7 +91,8 @@ func (s *Store) Available(ctx context.Context, location string) (bool, error) {
 		}
 		return false, err
 	}
-	return true, nil
+
+	return len(result.Contents) > 0, nil
 }
 
 func (s *Store) List(ctx context.Context, prefix string) ([]string, error) {

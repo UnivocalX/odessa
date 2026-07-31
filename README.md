@@ -122,4 +122,6 @@ ODESSA_STORAGE_S3_ENDPOINT=http://storage:9000
 The AWS SDK will use the minio profile while communicating with the local MinIO server.
 
 
-## Start Odessa: `odessa --config config.yaml`
+## Start Odessa: 
+1. build - `go build -o bin/odessa-server cmd/server/*`
+2. run `./bin/odessa-server --config config.yaml`
