@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"example.com/aether/internal/repository"
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/repository"
+	"github.com/UnivocalX/odessa/internal/storage"
 	"github.com/go-playground/validator/v10"
 )
 

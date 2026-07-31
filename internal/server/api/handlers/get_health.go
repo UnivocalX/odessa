@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"example.com/aether/internal/server/api/utils"
-	"example.com/aether/pkg/dto"
+	"github.com/UnivocalX/odessa/internal/server/api/utils"
+	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
 func HandleHealth(w http.ResponseWriter, r *http.Request) {

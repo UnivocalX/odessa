@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"example.com/aether/internal/server/api"
-	"example.com/aether/internal/repository"
-	"example.com/aether/internal/service"
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/server/api"
+	"github.com/UnivocalX/odessa/internal/repository"
+	"github.com/UnivocalX/odessa/internal/service"
+	"github.com/UnivocalX/odessa/internal/storage"
 )
 
 func New(addr string, repo *repository.Repository, reg *storage.Registry) *http.Server {

@@ -3,9 +3,9 @@ package v1
 import (
 	"net/http"
 
-	"example.com/aether/internal/server/api/utils"
-	"example.com/aether/internal/service"
-	"example.com/aether/pkg/dto"
+	"github.com/UnivocalX/odessa/internal/server/api/utils"
+	"github.com/UnivocalX/odessa/internal/service"
+	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
 func HandlePostOrigin(svc *service.Service) http.HandlerFunc {

@@ -15,8 +15,8 @@ import (
 // Config holds the connection settings for the database.
 type Config struct {
 	// DSN is the PostgreSQL connection string.
-	// Example: "postgres://user:pass@localhost/aether?sslmode=disable"
-	//          "host=localhost port=5432 dbname=aether user=pg password=secret sslmode=disable"
+	// Example: "postgres://user:pass@localhost/odessa?sslmode=disable"
+	//          "host=localhost port=5432 dbname=odessa user=pg password=secret sslmode=disable"
 	DSN Secret
 }
 

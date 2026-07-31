@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	"example.com/aether/internal/server/api/handlers"
-	v1handlers "example.com/aether/internal/server/api/handlers/v1"
-	"example.com/aether/internal/server/api/middleware"
-	"example.com/aether/internal/server/api/utils"
-	"example.com/aether/internal/service"
+	"github.com/UnivocalX/odessa/internal/server/api/handlers"
+	v1handlers "github.com/UnivocalX/odessa/internal/server/api/handlers/v1"
+	"github.com/UnivocalX/odessa/internal/server/api/middleware"
+	"github.com/UnivocalX/odessa/internal/server/api/utils"
+	"github.com/UnivocalX/odessa/internal/service"
 )
 
 const APIPrefix = "api"

@@ -3,7 +3,7 @@ package repository
 import (
 	"net/url"
 
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/storage"
 	"github.com/go-playground/validator/v10"
 )
 

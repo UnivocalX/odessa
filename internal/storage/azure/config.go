@@ -6,7 +6,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/storage"
 )
 
 func init() {

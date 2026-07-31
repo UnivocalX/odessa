@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/storage"
 	"gorm.io/gorm"
 )
 

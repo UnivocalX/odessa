@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/storage"
 	"gorm.io/gorm"
 )
 

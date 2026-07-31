@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"example.com/aether/internal/service"
-	"example.com/aether/pkg/dto"
+	"github.com/UnivocalX/odessa/internal/service"
+	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
 func Respond(w http.ResponseWriter, r *http.Request, status int, body any) {

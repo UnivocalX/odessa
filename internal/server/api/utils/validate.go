@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"example.com/aether/internal/service"
+	"github.com/UnivocalX/odessa/internal/service"
 	"github.com/go-playground/validator/v10"
 )
 

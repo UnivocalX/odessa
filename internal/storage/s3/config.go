@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/storage"
 )
 
 func init() {

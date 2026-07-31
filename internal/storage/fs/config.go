@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/storage"
 )
 
 func init() {

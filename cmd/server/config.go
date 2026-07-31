@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"example.com/aether/internal/repository"
-	"example.com/aether/internal/storage"
-	"example.com/aether/internal/storage/azure"
-	"example.com/aether/internal/storage/fs"
-	"example.com/aether/internal/storage/s3"
+	"github.com/UnivocalX/odessa/internal/repository"
+	"github.com/UnivocalX/odessa/internal/storage"
+	"github.com/UnivocalX/odessa/internal/storage/azure"
+	"github.com/UnivocalX/odessa/internal/storage/fs"
+	"github.com/UnivocalX/odessa/internal/storage/s3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -26,20 +26,20 @@ import (
 //     --s3-endpoint
 //     --az-account
 //
-//  2. Environment variables (prefix AETHER_)
-//     AETHER_ADDR
-//     AETHER_DSN
-//     AETHER_AUTH_JWT_SECRET
+//  2. Environment variables (prefix ODESSA_)
+//     ODESSA_ADDR
+//     ODESSA_DSN
+//     ODESSA_AUTH_JWT_SECRET
 //
-//     AETHER_STORAGE_FS_ROOT
+//     ODESSA_STORAGE_FS_ROOT
 //
-//     AETHER_STORAGE_S3_REGION
-//     AETHER_STORAGE_S3_ENDPOINT
+//     ODESSA_STORAGE_S3_REGION
+//     ODESSA_STORAGE_S3_ENDPOINT
 //
-//     AETHER_STORAGE_AZURE_ACCOUNT
-//     AETHER_STORAGE_AZURE_CONNECTION_STRING
-//     AETHER_STORAGE_AZURE_ACCOUNT_KEY
-//     AETHER_STORAGE_AZURE_USE_DEFAULT_CREDENTIAL
+//     ODESSA_STORAGE_AZURE_ACCOUNT
+//     ODESSA_STORAGE_AZURE_CONNECTION_STRING
+//     ODESSA_STORAGE_AZURE_ACCOUNT_KEY
+//     ODESSA_STORAGE_AZURE_USE_DEFAULT_CREDENTIAL
 //
 //  3. Config file (--config)
 //
@@ -109,7 +109,7 @@ type AzureConfig struct {
 func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
 	v := viper.New()
 
-	v.SetEnvPrefix("AETHER")
+	v.SetEnvPrefix("ODESSA")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	v.AutomaticEnv()
 

@@ -10,13 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"example.com/aether/internal/server"
-	"example.com/aether/internal/repository"
-	"example.com/aether/internal/storage"
+	"github.com/UnivocalX/odessa/internal/server"
+	"github.com/UnivocalX/odessa/internal/repository"
+	"github.com/UnivocalX/odessa/internal/storage"
 
-	_ "example.com/aether/internal/storage/azure"
-	_ "example.com/aether/internal/storage/fs"
-	_ "example.com/aether/internal/storage/s3"
+	_ "github.com/UnivocalX/odessa/internal/storage/azure"
+	_ "github.com/UnivocalX/odessa/internal/storage/fs"
+	_ "github.com/UnivocalX/odessa/internal/storage/s3"
 
 	"github.com/spf13/cobra"
 )
@@ -25,7 +25,7 @@ var configFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "server",
-	Short: "Aether HTTP server",
+	Short: "Odessa HTTP server",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := loadConfig(cmd, configFile)
 		if err != nil {
