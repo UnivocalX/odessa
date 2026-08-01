@@ -45,6 +45,13 @@ func RespondUnauthorized(w http.ResponseWriter, r *http.Request, message string)
 	})
 }
 
+func RespondForbidden(w http.ResponseWriter, r *http.Request, message string) {
+	Respond(w, r, http.StatusForbidden, dto.ErrorResponse{
+		Response: dto.Response{Message: "forbidden"},
+		Error:    message,
+	})
+}
+
 func RespondConflict(w http.ResponseWriter, r *http.Request, e error) {
 	Respond(w, r, http.StatusConflict, dto.ErrorResponse{
 		Response: dto.Response{Message: "conflict"},

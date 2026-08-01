@@ -15,6 +15,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type AuthOptions struct {
@@ -31,6 +32,12 @@ type AuthTokens struct {
 	RefreshToken string
 	ExpiresIn    int
 }
+
+const (
+	DefaultAdminName      = "admin"
+	DefaultAdminEmail     = "admin@odessa.com"
+	PermissionManageUsers = "users:manage"
+)
 
 // ValidateAccessToken validates an access token and checks current user state.
 func (s *Service) ValidateAccessToken(ctx context.Context, rawToken string) (uint, error) {
@@ -56,15 +63,71 @@ func (s *Service) ValidateAccessToken(ctx context.Context, rawToken string) (uin
 	return uint(userID), nil
 }
 
-// NewUser validates and hashes a plaintext password before persisting it.
-func (s *Service) NewUser(ctx context.Context, name, email string, password repository.Secret) (*repository.User, error) {
+// CreateUser validates and hashes a plaintext password before persisting it.
+func (s *Service) CreateUser(ctx context.Context, name, email string, password repository.Secret) (*repository.User, error) {
+	return s.createUser(ctx, name, email, password, repository.UserRole)
+}
+
+func (s *Service) ListUsers(ctx context.Context) ([]repository.User, error) {
+	return s.repo.ListUsers(ctx)
+}
+
+// DeleteUser removes a user and the authentication records linked to it.
+func (s *Service) DeleteUser(ctx context.Context, userID uint) error {
+	if err := s.repo.DeleteUser(ctx, userID); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return fmt.Errorf("%w: user", ErrNotFound)
+		}
+		return err
+	}
+	return nil
+}
+
+// CreateAdmin creates the initial administrator account.
+func (s *Service) CreateAdmin(ctx context.Context, name, email string, password repository.Secret) (*repository.User, error) {
+	return s.createUser(ctx, name, email, password, repository.AdminRole)
+}
+
+// EnsureDefaultAdmin creates the fixed administrator only when it does not exist.
+// It never promotes an existing account, including an existing regular user.
+func (s *Service) EnsureDefaultAdmin(ctx context.Context) (bool, string, error) {
+	user, err := s.repo.GetUserByEmailIncludingDeleted(ctx, DefaultAdminEmail)
+	switch {
+	case err == nil:
+		if !user.DeletedAt.Valid {
+			return false, "", nil
+		}
+		if err := s.repo.PurgeUser(ctx, user.ID); err != nil {
+			return false, "", fmt.Errorf("remove deleted administrator: %w", err)
+		}
+		return s.createDefaultAdmin(ctx)
+	case !errors.Is(err, gorm.ErrRecordNotFound):
+		return false, "", err
+	}
+
+	return s.createDefaultAdmin(ctx)
+}
+
+func (s *Service) createDefaultAdmin(ctx context.Context) (bool, string, error) {
+	password, err := newRandomPassword()
+	if err != nil {
+		return false, "", fmt.Errorf("generate administrator password: %w", err)
+	}
+	_, err = s.CreateAdmin(ctx, DefaultAdminName, DefaultAdminEmail, repository.Secret(password))
+	if err != nil {
+		return false, "", err
+	}
+	return true, password, nil
+}
+
+func (s *Service) createUser(ctx context.Context, name, email string, password repository.Secret, role string) (*repository.User, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password.Expose()), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
-	user, err := s.repo.CreateUser(ctx, name, email, repository.Secret(hashedPassword))
+	user, err := s.repo.CreateUser(ctx, name, email, repository.Secret(hashedPassword), role)
 	if err != nil {
 		if errors.Is(err, repository.ErrAlreadyExists) {
 			return nil, fmt.Errorf("%w: user", ErrAlreadyExists)
@@ -78,6 +141,25 @@ func (s *Service) NewUser(ctx context.Context, name, email string, password repo
 	}
 
 	return user, nil
+}
+
+func (s *Service) IsAdmin(ctx context.Context, userID uint) bool {
+	return s.HasPermission(ctx, userID, PermissionManageUsers)
+}
+
+// HasPermission evaluates the minimal role-to-permission mapping.
+func (s *Service) HasPermission(ctx context.Context, userID uint, permission string) bool {
+	user, err := s.repo.GetUser(ctx, userID)
+	if err != nil || user.DisabledAt != nil {
+		return false
+	}
+
+	switch user.Role {
+	case repository.AdminRole:
+		return permission == PermissionManageUsers
+	default:
+		return false
+	}
 }
 
 // Login verifies a user's credentials and returns a signed access token.
@@ -292,6 +374,14 @@ type accessClaims struct {
 
 func newOpaqueToken() (string, error) {
 	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func newRandomPassword() (string, error) {
+	b := make([]byte, 24)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}

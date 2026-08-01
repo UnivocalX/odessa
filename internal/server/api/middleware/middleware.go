@@ -122,6 +122,86 @@ func Authenticate(svc *service.Service) func(http.Handler) http.Handler {
 	}
 }
 
+// AuthenticateRoutes protects every non-public API route and adds the user ID
+// to the request context. Public routes are explicitly listed below.
+func AuthenticateRoutes(svc *service.Service) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !requiresAuthentication(r.Method, r.URL.Path) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			const unauthorizedMessage = "missing or invalid authentication token"
+			parts := strings.Fields(r.Header.Get("Authorization"))
+			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+				respondUnauthorized(w, r, unauthorizedMessage)
+				return
+			}
+
+			userID, err := svc.ValidateAccessToken(r.Context(), parts[1])
+			if err != nil {
+				respondUnauthorized(w, r, unauthorizedMessage)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), userIDContextKey, userID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// RequirePermission allows an authenticated user with the requested permission.
+func RequirePermission(svc *service.Service, permission string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userID, ok := UserID(r)
+			if !ok || !svc.HasPermission(r.Context(), userID, permission) {
+				utils.RespondForbidden(w, r, "insufficient permissions")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// AuthorizeRoutes applies route permissions centrally. Routes without an
+// entry are available to any authenticated user.
+func AuthorizeRoutes(svc *service.Service) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			permission := requiredPermission(r.Method, r.URL.Path)
+			if permission == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			userID, ok := UserID(r)
+			if !ok || !svc.HasPermission(r.Context(), userID, permission) {
+				utils.RespondForbidden(w, r, "insufficient permissions")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func requiresAuthentication(method, path string) bool {
+	if strings.HasPrefix(path, "/api/v1/") {
+		return true
+	}
+	return method == http.MethodPost && (path == "/api/auth/logout" ||
+		path == "/api/auth/password/change" ||
+		path == "/api/auth/account/disable")
+}
+
+func requiredPermission(method, path string) string {
+	if method == http.MethodPost && path == "/api/v1/users" {
+		return service.PermissionManageUsers
+	}
+	return ""
+}
+
 // UserID returns the authenticated user's database ID from the request context.
 func UserID(r *http.Request) (uint, bool) {
 	userID, ok := r.Context().Value(userIDContextKey).(uint)

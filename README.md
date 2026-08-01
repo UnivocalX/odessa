@@ -7,13 +7,12 @@ Odessa is a data-origin and dataset platform for organizations, data engineering
 - **API:** Go HTTP server using `net/http`
 - **Database:** PostgreSQL with embedded, versioned migrations
 - **Storage:** filesystem, S3-compatible storage, and Azure Blob Storage
-- **Authentication:** bcrypt password hashing and JWT bearer access tokens
+- **Authentication:** bcrypt password hashing and JWT bearer access tokens. Public signup is disabled; authenticated users manage accounts.
 
 ## API
 
 Public endpoints:
 
-- `POST /api/signup`
 - `POST /api/login`
 - `POST /api/refresh`
 - `POST /api/password/reset/request`
@@ -29,8 +28,11 @@ Protected endpoints require `Authorization: Bearer <access-token>`:
 - `POST /api/logout`
 - `POST /api/password/change`
 - `POST /api/account/disable`
+- `POST /api/v1/users` (administrators with `users:manage` permission)
+- `GET /api/v1/users` (authenticated users)
+- `DELETE /api/v1/users/{id}` (authenticated users)
 
-Origins and related data are shared resources in the current product model. Authentication is not authorization; organization and role support is planned for a future phase.
+Origins and related data are shared resources in the current product model. The initial administrator account is created during bootstrap. The `admin` role has the initial `users:manage` permission; regular users do not have it.
 
 ## Configuration
 
@@ -64,6 +66,7 @@ auth:
   refresh_token_lifetime: 720h
   reset_token_lifetime: 1h
   password_reset_url: "https://app.example.com/reset-password"
+
 
 email:
   smtp:
@@ -163,6 +166,10 @@ storage:
 ```
 
 ## Authentication lifecycle
+
+There is no public signup endpoint. On startup, if `admin@odessa.com` does not exist, Odessa creates the administrator `admin` with a cryptographically random password and logs the one-time credentials. Save that password immediately and change it after logging in.
+
+After logging in, an administrator can create regular users with `POST /api/v1/users`. User authorization is enforced separately from authentication through the `users:manage` permission, so more roles and permissions can be added later without changing the route shape.
 
 Login returns a short-lived access token and a rotating refresh token. Refresh tokens are stored only as hashes, are revoked on use, and are revoked when a password changes or an account is disabled. Logout revokes the submitted refresh token. Password reset requests intentionally return the same response whether or not an account exists.
 

@@ -48,6 +48,22 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 
+		svc := service.New(repo, storage.Default(), service.AuthOptions{
+			JWTSecret:            cfg.Auth.JWTSecret,
+			AccessTokenLifetime:  cfg.Auth.AccessTokenLifetime,
+			RefreshTokenLifetime: cfg.Auth.RefreshTokenLifetime,
+			ResetTokenLifetime:   cfg.Auth.ResetTokenLifetime,
+			PasswordResetURL:     cfg.Auth.PasswordResetURL,
+			EmailSender:          newEmailSender(cfg.Email.SMTP),
+		})
+		created, password, err := svc.EnsureDefaultAdmin(context.Background())
+		if err != nil {
+			return fmt.Errorf("bootstrap administrator: %w", err)
+		}
+		if created {
+			slog.Warn("default administrator created; save these credentials", "email", service.DefaultAdminEmail, "password", password)
+		}
+
 		if err := configureStorage(cfg.Storage); err != nil {
 			return fmt.Errorf("configure storage: %w", err)
 		}

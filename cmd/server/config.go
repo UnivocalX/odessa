@@ -164,15 +164,20 @@ func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
 	}
 
 	// Core flags.
-	_ = v.BindPFlag("addr", cmd.Flags().Lookup("addr"))
-	_ = v.BindPFlag("dsn", cmd.Flags().Lookup("dsn"))
-	_ = v.BindPFlag("auth.jwt_secret", cmd.Flags().Lookup("jwt-secret"))
+	bindFlag := func(key, name string) {
+		if flag := cmd.Flags().Lookup(name); flag != nil {
+			_ = v.BindPFlag(key, flag)
+		}
+	}
+	bindFlag("addr", "addr")
+	bindFlag("dsn", "dsn")
+	bindFlag("auth.jwt_secret", "jwt-secret")
 
 	// Storage flags.
-	_ = v.BindPFlag("storage.fs.root", cmd.Flags().Lookup("fs-root"))
-	_ = v.BindPFlag("storage.s3.region", cmd.Flags().Lookup("s3-region"))
-	_ = v.BindPFlag("storage.s3.endpoint", cmd.Flags().Lookup("s3-endpoint"))
-	_ = v.BindPFlag("storage.azure.account", cmd.Flags().Lookup("az-account"))
+	bindFlag("storage.fs.root", "fs-root")
+	bindFlag("storage.s3.region", "s3-region")
+	bindFlag("storage.s3.endpoint", "s3-endpoint")
+	bindFlag("storage.azure.account", "az-account")
 
 	var cfg Config
 

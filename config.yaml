@@ -5,7 +5,6 @@ storage:
     disabled: true
 
   s3:
-    disabled: false
     region: "us-east-1"
     endpoint: "http://localhost:9000"
 

@@ -2,14 +2,17 @@
   "info": {
     "_postman_id": "3a6f3d42-9e93-4c2e-9c2d-odessa-api",
     "name": "Odessa API",
-    "description": "Postman collection for the Odessa API. Run Signup or Login first; the login and refresh tests store tokens in the active environment.",
+    "description": "Postman collection for the Odessa API. On first startup, Odessa creates admin@odessa.com with a random password and logs it once. Set admin_password in the active environment, then run Login. Login and refresh tests store tokens automatically.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "base_url", "value": "http://localhost:9090" },
     { "key": "access_token", "value": "" },
     { "key": "refresh_token", "value": "" },
-    { "key": "origin_id", "value": "1" }
+    { "key": "admin_email", "value": "admin@odessa.com" },
+    { "key": "admin_password", "value": "" },
+    { "key": "origin_id", "value": "1" },
+    { "key": "user_id", "value": "1" }
   ],
   "item": [
     {
@@ -29,26 +32,17 @@
       "name": "Authentication",
       "item": [
         {
-          "name": "Sign up",
-          "request": {
-            "method": "POST",
-            "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Odessa User\",\n  \"email\": \"user@example.com\",\n  \"password\": \"change-me-123\"\n}" },
-            "url": { "raw": "{{base_url}}/api/auth/signup", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "signup" ] }
-          }
-        },
-        {
           "name": "Login",
           "event": [
             {
               "listen": "test",
-              "script": { "type": "text/javascript", "exec": [ "pm.test('Login succeeded', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "if (body.access_token) { pm.environment.set('access_token', body.access_token); pm.collectionVariables.set('access_token', body.access_token); }", "if (body.refresh_token) { pm.environment.set('refresh_token', body.refresh_token); pm.collectionVariables.set('refresh_token', body.refresh_token); }" ] }
+              "script": { "type": "text/javascript", "exec": [ "pm.test('Login succeeded', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "pm.test('Access token returned', function () { pm.expect(body.access_token).to.be.a('string').and.not.empty; });", "pm.environment.set('access_token', body.access_token);", "pm.environment.set('refresh_token', body.refresh_token);", "pm.collectionVariables.set('access_token', body.access_token);", "pm.collectionVariables.set('refresh_token', body.refresh_token);" ] }
             }
           ],
           "request": {
             "method": "POST",
             "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"change-me-123\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}" },
             "url": { "raw": "{{base_url}}/api/auth/login", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "login" ] }
           }
         },
@@ -57,7 +51,7 @@
           "event": [
             {
               "listen": "test",
-              "script": { "type": "text/javascript", "exec": [ "pm.test('Refresh succeeded', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "if (body.access_token) { pm.environment.set('access_token', body.access_token); pm.collectionVariables.set('access_token', body.access_token); }", "if (body.refresh_token) { pm.environment.set('refresh_token', body.refresh_token); pm.collectionVariables.set('refresh_token', body.refresh_token); }" ] }
+              "script": { "type": "text/javascript", "exec": [ "pm.test('Refresh succeeded', function () { pm.response.to.have.status(200); });", "const body = pm.response.json();", "pm.environment.set('access_token', body.access_token);", "pm.environment.set('refresh_token', body.refresh_token);", "pm.collectionVariables.set('access_token', body.access_token);", "pm.collectionVariables.set('refresh_token', body.refresh_token);" ] }
             }
           ],
           "request": {
@@ -83,6 +77,48 @@
             "header": [ { "key": "Content-Type", "value": "application/json" } ],
             "body": { "mode": "raw", "raw": "{\n  \"token\": \"paste-reset-token-here\",\n  \"password\": \"new-password-123\"\n}" },
             "url": { "raw": "{{base_url}}/api/auth/password/reset/confirm", "host": [ "{{base_url}}" ], "path": [ "api", "auth", "password", "reset", "confirm" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "url": { "raw": "{{base_url}}/api/v1/users", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "users" ] }
+          }
+        },
+        {
+          "name": "Create user",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('User created with admin permission', function () { pm.response.to.have.status(201); });" ] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"New Odessa User\",\n  \"email\": \"new-user@example.com\",\n  \"password\": \"change-me-123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "users" ] }
+          }
+        },
+        {
+          "name": "Delete user",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "pm.test('User deleted', function () { pm.response.to.have.status(204); });" ] }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "url": { "raw": "{{base_url}}/api/v1/users/{{user_id}}", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "users", "{{user_id}}" ] }
           }
         }
       ]

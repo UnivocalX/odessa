@@ -8,6 +8,7 @@ import (
 
 var (
 	ErrAlreadyExists = errors.New("record already exists")
+	ErrNotFound      = errors.New("record not found")
 )
 
 // isDuplicateKeyError returns true if err indicates a unique constraint violation.

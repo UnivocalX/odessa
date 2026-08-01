@@ -16,7 +16,7 @@ var (
 	ErrLocationNotAccessible = errors.New("location is not accessible")
 
 	// ErrAlreadyExists is returned when the resource already exists.
-	ErrAlreadyExists = errors.New("origin already exists")
+	ErrAlreadyExists = errors.New("already exists")
 
 	// ErrNotFound is returned when the requested resource does not exist.
 	ErrNotFound = errors.New("not found")
