@@ -99,7 +99,7 @@ func Recovery(next http.Handler) http.Handler {
 }
 
 // Authenticate validates a Bearer JWT and adds its subject to the request context.
-func Authenticate(svc *service.Service) func(http.Handler) http.Handler {
+func Authenticate(svc *service.AuthService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			const unauthorizedMessage = "missing or invalid authentication token"
@@ -124,7 +124,7 @@ func Authenticate(svc *service.Service) func(http.Handler) http.Handler {
 
 // AuthenticateRoutes protects every non-public API route and adds the user ID
 // to the request context. Public routes are explicitly listed below.
-func AuthenticateRoutes(svc *service.Service) func(http.Handler) http.Handler {
+func AuthenticateRoutes(svc *service.AuthService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !requiresAuthentication(r.Method, r.URL.Path) {
@@ -152,7 +152,7 @@ func AuthenticateRoutes(svc *service.Service) func(http.Handler) http.Handler {
 }
 
 // RequirePermission allows an authenticated user with the requested permission.
-func RequirePermission(svc *service.Service, permission string) func(http.Handler) http.Handler {
+func RequirePermission(svc *service.AuthService, permission string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userID, ok := UserID(r)
@@ -167,7 +167,7 @@ func RequirePermission(svc *service.Service, permission string) func(http.Handle
 
 // AuthorizeRoutes applies route permissions centrally. Routes without an
 // entry are available to any authenticated user.
-func AuthorizeRoutes(svc *service.Service) func(http.Handler) http.Handler {
+func AuthorizeRoutes(svc *service.AuthService) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			permission := requiredPermission(r.Method, r.URL.Path)

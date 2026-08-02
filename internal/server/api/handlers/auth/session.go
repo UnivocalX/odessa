@@ -9,7 +9,7 @@ import (
 	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
-func HandleLogout(svc *service.Service) http.HandlerFunc {
+func HandleLogout(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req dto.RefreshRequest
 		if err := utils.Decode(r, &req); err != nil {
@@ -29,7 +29,7 @@ func HandleLogout(svc *service.Service) http.HandlerFunc {
 	}
 }
 
-func HandleChangePassword(svc *service.Service) http.HandlerFunc {
+func HandleChangePassword(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := middleware.UserID(r)
 		if !ok {
@@ -52,7 +52,7 @@ func HandleChangePassword(svc *service.Service) http.HandlerFunc {
 	}
 }
 
-func HandleDisableAccount(svc *service.Service) http.HandlerFunc {
+func HandleDisableAccount(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := middleware.UserID(r)
 		if !ok {

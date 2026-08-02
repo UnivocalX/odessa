@@ -41,9 +41,8 @@ type ListUsersResponse struct {
 	Users []UserResponse `json:"users"`
 }
 
-type TaskResponse struct {
+type ScanOriginResponse struct {
 	ID        uint   `json:"id"`
-	Type      string `json:"type"`
 	Status    string `json:"status"`
 	CreatedAt string `json:"created_at"`
 }

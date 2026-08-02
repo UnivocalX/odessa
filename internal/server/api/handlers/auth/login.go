@@ -8,7 +8,7 @@ import (
 	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
-func HandleLogin(svc *service.Service) http.HandlerFunc {
+func HandleLogin(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req dto.LoginRequest
 		if err := utils.Decode(r, &req); err != nil {
@@ -24,7 +24,7 @@ func HandleLogin(svc *service.Service) http.HandlerFunc {
 	}
 }
 
-func HandleRefreshSession(svc *service.Service) http.HandlerFunc {
+func HandleRefreshSession(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req dto.RefreshRequest
 		if err := utils.Decode(r, &req); err != nil {

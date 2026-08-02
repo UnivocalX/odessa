@@ -8,7 +8,7 @@ import (
 	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
-func HandleListOrigins(svc *service.Service) http.HandlerFunc {
+func HandleListOrigins(svc *service.BlobService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origins, err := svc.ListOrigins(r.Context())
 		if err != nil {

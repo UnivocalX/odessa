@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/UnivocalX/odessa/internal/config"
 	"github.com/UnivocalX/odessa/internal/repository"
 	"github.com/UnivocalX/odessa/internal/server"
 	"github.com/UnivocalX/odessa/internal/service"
@@ -36,83 +37,78 @@ func newEmailSender(cfg SMTPConfig) service.EmailSender {
 var rootCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Odessa HTTP server",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := loadConfig(cmd, configFile)
-		if err != nil {
-			return fmt.Errorf("load config: %w", err)
-		}
+	RunE:  run,
+}
 
-		repo, err := repository.New(repository.Config{DSN: cfg.DSN})
-		if err != nil {
-			slog.Error("open database", "error", err)
-			return err
-		}
+func run(cmd *cobra.Command, args []string) error {
+	cfg, err := loadConfig(cmd, configFile)
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
 
-		svc := service.New(repo, storage.Default(), service.AuthOptions{
-			JWTSecret:            cfg.Auth.JWTSecret,
-			AccessTokenLifetime:  cfg.Auth.AccessTokenLifetime,
-			RefreshTokenLifetime: cfg.Auth.RefreshTokenLifetime,
-			ResetTokenLifetime:   cfg.Auth.ResetTokenLifetime,
-			PasswordResetURL:     cfg.Auth.PasswordResetURL,
-			EmailSender:          newEmailSender(cfg.Email.SMTP),
-		})
-		created, password, err := svc.EnsureDefaultAdmin(context.Background())
-		if err != nil {
-			return fmt.Errorf("bootstrap administrator: %w", err)
-		}
-		if created {
-			slog.Warn("default administrator created; save these credentials", "email", service.DefaultAdminEmail, "password", password)
-		}
+	repo, err := repository.New(repository.Config{DSN: cfg.DSN})
+	if err != nil {
+		slog.Error("open database", "error", err)
+		return err
+	}
 
-		if err := configureStorage(cfg.Storage); err != nil {
-			return fmt.Errorf("configure storage: %w", err)
-		}
+	blobSvc := service.NewBlobService(repo, storage.Default())
+	authSvc := service.NewAuthService(repo, service.AuthOptions{
+		JWTSecret:            cfg.Auth.JWTSecret,
+		AccessTokenLifetime:  cfg.Auth.AccessTokenLifetime,
+		RefreshTokenLifetime: cfg.Auth.RefreshTokenLifetime,
+		ResetTokenLifetime:   cfg.Auth.ResetTokenLifetime,
+		PasswordResetURL:     cfg.Auth.PasswordResetURL,
+		EmailSender:          newEmailSender(cfg.Email.SMTP),
+	})
+	created, password, err := authSvc.EnsureDefaultAdmin(context.Background())
+	if err != nil {
+		return fmt.Errorf("bootstrap administrator: %w", err)
+	}
+	if created {
+		slog.Warn("default administrator created; save these credentials", "email", service.DefaultAdminEmail, "password", password)
+	}
 
-		srv := server.New(repo, storage.Default(), server.Config{
-			Addr: cfg.Addr,
-			HTTP: server.Options{
-				ReadTimeout:         cfg.HTTP.ReadTimeout,
-				WriteTimeout:        cfg.HTTP.WriteTimeout,
-				IdleTimeout:         cfg.HTTP.IdleTimeout,
-				MaxHeaderBytes:      cfg.HTTP.MaxHeaderBytes,
-				MaxRequestBodyBytes: cfg.HTTP.MaxRequestBodyBytes,
-			},
-			Auth: service.AuthOptions{
-				JWTSecret:            cfg.Auth.JWTSecret,
-				AccessTokenLifetime:  cfg.Auth.AccessTokenLifetime,
-				RefreshTokenLifetime: cfg.Auth.RefreshTokenLifetime,
-				ResetTokenLifetime:   cfg.Auth.ResetTokenLifetime,
-				PasswordResetURL:     cfg.Auth.PasswordResetURL,
-				EmailSender:          newEmailSender(cfg.Email.SMTP),
-			},
-		})
+	if err := config.ConfigureStorage(cfg.Storage); err != nil {
+		return fmt.Errorf("configure storage: %w", err)
+	}
 
-		go func() {
-			if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				slog.Error("server failed", "error", err)
-				os.Exit(1)
-			}
-		}()
+	srv := server.New(authSvc, blobSvc, server.Config{
+		Addr: cfg.Addr,
+		HTTP: server.Options{
+			ReadTimeout:         cfg.HTTP.ReadTimeout,
+			WriteTimeout:        cfg.HTTP.WriteTimeout,
+			IdleTimeout:         cfg.HTTP.IdleTimeout,
+			MaxHeaderBytes:      cfg.HTTP.MaxHeaderBytes,
+			MaxRequestBodyBytes: cfg.HTTP.MaxRequestBodyBytes,
+		},
+	})
 
-		slog.Info("server started", "addr", cfg.Addr)
-
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-		<-sig
-
-		slog.Info("shutting down...")
-
-		ctx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout)
-		defer cancel()
-
-		if err := srv.Shutdown(ctx); err != nil {
-			slog.Error("shutdown failed", "error", err)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("server failed", "error", err)
 			os.Exit(1)
 		}
+	}()
 
-		slog.Info("server stopped")
-		return nil
-	},
+	slog.Info("server started", "addr", cfg.Addr)
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+
+	slog.Info("shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("shutdown failed", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("server stopped")
+	return nil
 }
 
 func init() {

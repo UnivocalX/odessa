@@ -10,7 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func (s *Service) ListOrigins(ctx context.Context) ([]repository.Origin, error) {
+func (s *BlobService) ListOrigins(ctx context.Context) ([]repository.Origin, error) {
 	origins, err := s.repo.ListOrigins(ctx)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to list origins", "error", err)
@@ -21,7 +21,7 @@ func (s *Service) ListOrigins(ctx context.Context) ([]repository.Origin, error) 
 
 // RegisterOrigin validates the URI resolves to a configured storage backend,
 // checks that the location is accessible, then persists the origin.
-func (s *Service) RegisterOrigin(ctx context.Context, uri string) (*repository.Origin, error) {
+func (s *BlobService) RegisterOrigin(ctx context.Context, uri string) (*repository.Origin, error) {
 	store, err := s.reg.Resolve(uri)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedBackend, uri)
@@ -52,4 +52,29 @@ func (s *Service) RegisterOrigin(ctx context.Context, uri string) (*repository.O
 	}
 
 	return origin, nil
+}
+
+func (s *BlobService) RetrieveScanOrigin(ctx context.Context, oid uint) (*repository.ScanOrigin, error) {
+	scan, err := s.repo.GetScanOrigin(ctx, oid)
+	if err != nil {
+		return nil, fmt.Errorf("%w: scan origin %d", ErrNotFound, oid)
+	}
+	return scan, nil
+}
+
+func (s *BlobService) NewScanOrigin(ctx context.Context, oid uint) (*repository.ScanOrigin, error) {
+	// Verify the origin exists.
+	_, err := s.repo.GetOrigin(ctx, oid)
+	if err != nil {
+		return nil, fmt.Errorf("%w: origin %d", ErrNotFound, oid)
+	}
+
+	task, err := s.repo.CreateScanOrigin(ctx, oid)
+
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to create scan origin", "origin_id", oid, "error", err)
+		return nil, err
+	}
+
+	return task, nil
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
-func HandlePostOrigin(svc *service.Service) http.HandlerFunc {
+func HandlePostOrigin(svc *service.BlobService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req dto.PostOriginRequest
 

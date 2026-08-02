@@ -40,7 +40,7 @@ const (
 )
 
 // ValidateAccessToken validates an access token and checks current user state.
-func (s *Service) ValidateAccessToken(ctx context.Context, rawToken string) (uint, error) {
+func (s *AuthService) ValidateAccessToken(ctx context.Context, rawToken string) (uint, error) {
 	claims := &accessClaims{}
 	token, err := jwt.ParseWithClaims(rawToken, claims, func(token *jwt.Token) (any, error) {
 		if token.Method != jwt.SigningMethodHS256 {
@@ -64,16 +64,16 @@ func (s *Service) ValidateAccessToken(ctx context.Context, rawToken string) (uin
 }
 
 // CreateUser validates and hashes a plaintext password before persisting it.
-func (s *Service) CreateUser(ctx context.Context, name, email string, password repository.Secret) (*repository.User, error) {
+func (s *AuthService) CreateUser(ctx context.Context, name, email string, password repository.Secret) (*repository.User, error) {
 	return s.createUser(ctx, name, email, password, repository.UserRole)
 }
 
-func (s *Service) ListUsers(ctx context.Context) ([]repository.User, error) {
+func (s *AuthService) ListUsers(ctx context.Context) ([]repository.User, error) {
 	return s.repo.ListUsers(ctx)
 }
 
 // DeleteUser removes a user and the authentication records linked to it.
-func (s *Service) DeleteUser(ctx context.Context, userID uint) error {
+func (s *AuthService) DeleteUser(ctx context.Context, userID uint) error {
 	if err := s.repo.DeleteUser(ctx, userID); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return fmt.Errorf("%w: user", ErrNotFound)
@@ -84,13 +84,13 @@ func (s *Service) DeleteUser(ctx context.Context, userID uint) error {
 }
 
 // CreateAdmin creates the initial administrator account.
-func (s *Service) CreateAdmin(ctx context.Context, name, email string, password repository.Secret) (*repository.User, error) {
+func (s *AuthService) CreateAdmin(ctx context.Context, name, email string, password repository.Secret) (*repository.User, error) {
 	return s.createUser(ctx, name, email, password, repository.AdminRole)
 }
 
 // EnsureDefaultAdmin creates the fixed administrator only when it does not exist.
 // It never promotes an existing account, including an existing regular user.
-func (s *Service) EnsureDefaultAdmin(ctx context.Context) (bool, string, error) {
+func (s *AuthService) EnsureDefaultAdmin(ctx context.Context) (bool, string, error) {
 	user, err := s.repo.GetUserByEmailIncludingDeleted(ctx, DefaultAdminEmail)
 	switch {
 	case err == nil:
@@ -108,7 +108,7 @@ func (s *Service) EnsureDefaultAdmin(ctx context.Context) (bool, string, error) 
 	return s.createDefaultAdmin(ctx)
 }
 
-func (s *Service) createDefaultAdmin(ctx context.Context) (bool, string, error) {
+func (s *AuthService) createDefaultAdmin(ctx context.Context) (bool, string, error) {
 	password, err := newRandomPassword()
 	if err != nil {
 		return false, "", fmt.Errorf("generate administrator password: %w", err)
@@ -120,7 +120,7 @@ func (s *Service) createDefaultAdmin(ctx context.Context) (bool, string, error) 
 	return true, password, nil
 }
 
-func (s *Service) createUser(ctx context.Context, name, email string, password repository.Secret, role string) (*repository.User, error) {
+func (s *AuthService) createUser(ctx context.Context, name, email string, password repository.Secret, role string) (*repository.User, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password.Expose()), bcrypt.DefaultCost)
 	if err != nil {
@@ -143,12 +143,12 @@ func (s *Service) createUser(ctx context.Context, name, email string, password r
 	return user, nil
 }
 
-func (s *Service) IsAdmin(ctx context.Context, userID uint) bool {
+func (s *AuthService) IsAdmin(ctx context.Context, userID uint) bool {
 	return s.HasPermission(ctx, userID, PermissionManageUsers)
 }
 
 // HasPermission evaluates the minimal role-to-permission mapping.
-func (s *Service) HasPermission(ctx context.Context, userID uint, permission string) bool {
+func (s *AuthService) HasPermission(ctx context.Context, userID uint, permission string) bool {
 	user, err := s.repo.GetUser(ctx, userID)
 	if err != nil || user.DisabledAt != nil {
 		return false
@@ -163,7 +163,7 @@ func (s *Service) HasPermission(ctx context.Context, userID uint, permission str
 }
 
 // Login verifies a user's credentials and returns a signed access token.
-func (s *Service) Login(ctx context.Context, email string, password repository.Secret) (*AuthTokens, error) {
+func (s *AuthService) Login(ctx context.Context, email string, password repository.Secret) (*AuthTokens, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -212,7 +212,7 @@ func (s *Service) Login(ctx context.Context, email string, password repository.S
 	return &AuthTokens{AccessToken: signed, RefreshToken: refresh, ExpiresIn: int(s.auth.AccessTokenLifetime.Seconds())}, nil
 }
 
-func (s *Service) RefreshSession(ctx context.Context, refresh string) (*AuthTokens, error) {
+func (s *AuthService) RefreshSession(ctx context.Context, refresh string) (*AuthTokens, error) {
 	session, err := s.repo.GetRefreshSession(ctx, hashToken(refresh))
 	if err != nil || session.RevokedAt != nil || time.Now().After(session.ExpiresAt) {
 		return nil, ErrInvalidCredentials
@@ -241,7 +241,7 @@ func (s *Service) RefreshSession(ctx context.Context, refresh string) (*AuthToke
 	return s.issueAccessToken(ctx, session.UserID, next, now)
 }
 
-func (s *Service) RevokeRefreshToken(ctx context.Context, refresh string) error {
+func (s *AuthService) RevokeRefreshToken(ctx context.Context, refresh string) error {
 	session, err := s.repo.GetRefreshSession(ctx, hashToken(refresh))
 	if err != nil {
 		return nil
@@ -252,7 +252,7 @@ func (s *Service) RevokeRefreshToken(ctx context.Context, refresh string) error 
 }
 
 // Logout revokes the refresh session and invalidates all access tokens for the user.
-func (s *Service) Logout(ctx context.Context, userID uint, refresh string) error {
+func (s *AuthService) Logout(ctx context.Context, userID uint, refresh string) error {
 	if err := s.RevokeRefreshToken(ctx, refresh); err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (s *Service) Logout(ctx context.Context, userID uint, refresh string) error
 	return s.repo.UpdateUser(ctx, user)
 }
 
-func (s *Service) ChangePassword(ctx context.Context, userID uint, current, next repository.Secret) error {
+func (s *AuthService) ChangePassword(ctx context.Context, userID uint, current, next repository.Secret) error {
 	user, err := s.repo.GetUser(ctx, userID)
 	if err != nil || user.DisabledAt != nil {
 		return ErrInvalidCredentials
@@ -275,7 +275,7 @@ func (s *Service) ChangePassword(ctx context.Context, userID uint, current, next
 	return s.setPassword(ctx, user, next)
 }
 
-func (s *Service) DisableAccount(ctx context.Context, userID uint, password repository.Secret) error {
+func (s *AuthService) DisableAccount(ctx context.Context, userID uint, password repository.Secret) error {
 	user, err := s.repo.GetUser(ctx, userID)
 	if err != nil || user.DisabledAt != nil {
 		return ErrInvalidCredentials
@@ -292,7 +292,7 @@ func (s *Service) DisableAccount(ctx context.Context, userID uint, password repo
 	return s.repo.RevokeRefreshSessions(ctx, userID)
 }
 
-func (s *Service) RequestPasswordReset(ctx context.Context, email string) error {
+func (s *AuthService) RequestPasswordReset(ctx context.Context, email string) error {
 	user, err := s.repo.GetUserByEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
 	if err != nil || user.DisabledAt != nil {
 		return nil
@@ -315,7 +315,7 @@ func (s *Service) RequestPasswordReset(ctx context.Context, email string) error 
 	})
 }
 
-func (s *Service) ResetPassword(ctx context.Context, token string, password repository.Secret) error {
+func (s *AuthService) ResetPassword(ctx context.Context, token string, password repository.Secret) error {
 	reset, err := s.repo.GetPasswordResetToken(ctx, hashToken(token))
 	if err != nil || reset.UsedAt != nil || time.Now().After(reset.ExpiresAt) {
 		return ErrInvalidCredentials
@@ -335,7 +335,7 @@ func (s *Service) ResetPassword(ctx context.Context, token string, password repo
 	return s.repo.RevokeRefreshSessions(ctx, user.ID)
 }
 
-func (s *Service) setPassword(ctx context.Context, user *repository.User, password repository.Secret) error {
+func (s *AuthService) setPassword(ctx context.Context, user *repository.User, password repository.Secret) error {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password.Expose()), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
@@ -348,7 +348,7 @@ func (s *Service) setPassword(ctx context.Context, user *repository.User, passwo
 	return s.repo.RevokeRefreshSessions(ctx, user.ID)
 }
 
-func (s *Service) issueAccessToken(ctx context.Context, userID uint, refresh string, now time.Time) (*AuthTokens, error) {
+func (s *AuthService) issueAccessToken(ctx context.Context, userID uint, refresh string, now time.Time) (*AuthTokens, error) {
 	user, err := s.repo.GetUser(ctx, userID)
 	if err != nil {
 		return nil, err

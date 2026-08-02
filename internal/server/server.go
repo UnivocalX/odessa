@@ -4,10 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/UnivocalX/odessa/internal/repository"
 	"github.com/UnivocalX/odessa/internal/server/api"
 	"github.com/UnivocalX/odessa/internal/service"
-	"github.com/UnivocalX/odessa/internal/storage"
 )
 
 type Options struct {
@@ -21,14 +19,11 @@ type Options struct {
 type Config struct {
 	Addr string
 	HTTP Options
-	Auth service.AuthOptions
 }
 
-func New(repo *repository.Repository, reg *storage.Registry, cfg Config) *http.Server {
-	svc := service.New(repo, reg, cfg.Auth)
-
+func New(authSvc *service.AuthService, blobSvc *service.BlobService, cfg Config) *http.Server {
 	mux := http.NewServeMux()
-	handler := api.Register(mux, svc, cfg.HTTP.MaxRequestBodyBytes)
+	handler := api.Register(mux, authSvc, blobSvc, cfg.HTTP.MaxRequestBodyBytes)
 
 	return &http.Server{
 		Addr:           cfg.Addr,

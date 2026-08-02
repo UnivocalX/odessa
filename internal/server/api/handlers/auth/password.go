@@ -8,7 +8,7 @@ import (
 	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
-func HandlePasswordResetRequest(svc *service.Service) http.HandlerFunc {
+func HandlePasswordResetRequest(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req dto.PasswordResetRequest
 		if err := utils.Decode(r, &req); err != nil {
@@ -23,7 +23,7 @@ func HandlePasswordResetRequest(svc *service.Service) http.HandlerFunc {
 	}
 }
 
-func HandlePasswordResetConfirm(svc *service.Service) http.HandlerFunc {
+func HandlePasswordResetConfirm(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req dto.PasswordResetConfirmRequest
 		if err := utils.Decode(r, &req); err != nil {

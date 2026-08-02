@@ -34,7 +34,7 @@ func AuthRoute(method string, parts ...string) string {
 	return Route(method, append([]string{"auth"}, parts...)...)
 }
 
-func Register(mux *http.ServeMux, svc *service.Service, maxRequestBodyBytes int64) http.Handler {
+func Register(mux *http.ServeMux, authSvc *service.AuthService, blobSvc *service.BlobService, maxRequestBodyBytes int64) http.Handler {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		utils.RespondNotFound(w, r)
 	})
@@ -42,29 +42,29 @@ func Register(mux *http.ServeMux, svc *service.Service, maxRequestBodyBytes int6
 	mux.HandleFunc(Route(http.MethodGet, "health"), handlers.HandleHealth)
 
 	// authentication
-	mux.HandleFunc(AuthRoute(http.MethodPost, "login"), auth.HandleLogin(svc))
-	mux.HandleFunc(AuthRoute(http.MethodPost, "refresh"), auth.HandleRefreshSession(svc))
-	mux.HandleFunc(AuthRoute(http.MethodPost, "password/reset/request"), auth.HandlePasswordResetRequest(svc))
-	mux.HandleFunc(AuthRoute(http.MethodPost, "password/reset/confirm"), auth.HandlePasswordResetConfirm(svc))
+	mux.HandleFunc(AuthRoute(http.MethodPost, "login"), auth.HandleLogin(authSvc))
+	mux.HandleFunc(AuthRoute(http.MethodPost, "refresh"), auth.HandleRefreshSession(authSvc))
+	mux.HandleFunc(AuthRoute(http.MethodPost, "password/reset/request"), auth.HandlePasswordResetRequest(authSvc))
+	mux.HandleFunc(AuthRoute(http.MethodPost, "password/reset/confirm"), auth.HandlePasswordResetConfirm(authSvc))
 
-	mux.Handle(AuthRoute(http.MethodPost, "logout"), auth.HandleLogout(svc))
-	mux.Handle(AuthRoute(http.MethodPost, "password/change"), auth.HandleChangePassword(svc))
-	mux.Handle(AuthRoute(http.MethodPost, "account/disable"), auth.HandleDisableAccount(svc))
+	mux.Handle(AuthRoute(http.MethodPost, "logout"), auth.HandleLogout(authSvc))
+	mux.Handle(AuthRoute(http.MethodPost, "password/change"), auth.HandleChangePassword(authSvc))
+	mux.Handle(AuthRoute(http.MethodPost, "account/disable"), auth.HandleDisableAccount(authSvc))
 
 	// user management is authenticated now; authorization policy can be refined later.
-	mux.Handle(V1Route(http.MethodGet, "users"), userhandlers.HandleListUsers(svc))
-	mux.Handle(V1Route(http.MethodPost, "users"), userhandlers.HandleCreateUser(svc))
-	mux.Handle(V1Route(http.MethodDelete, "users/{id}"), userhandlers.HandleDeleteUser(svc))
+	mux.Handle(V1Route(http.MethodGet, "users"), userhandlers.HandleListUsers(authSvc))
+	mux.Handle(V1Route(http.MethodPost, "users"), userhandlers.HandleCreateUser(authSvc))
+	mux.Handle(V1Route(http.MethodDelete, "users/{id}"), userhandlers.HandleDeleteUser(authSvc))
 
 	// data management
-	mux.Handle(V1Route(http.MethodGet, "origins"), v1handlers.HandleListOrigins(svc))
-	mux.Handle(V1Route(http.MethodPost, "origins"), v1handlers.HandlePostOrigin(svc))
-	mux.Handle(V1Route(http.MethodPost, "origins/{id}/scan"), v1handlers.HandlePostOriginScan(svc))
-	mux.Handle(V1Route(http.MethodGet, "origins/{id}/scan"), v1handlers.HandleGetOriginScan(svc))
+	mux.Handle(V1Route(http.MethodGet, "origins"), v1handlers.HandleListOrigins(blobSvc))
+	mux.Handle(V1Route(http.MethodPost, "origins"), v1handlers.HandlePostOrigin(blobSvc))
+	mux.Handle(V1Route(http.MethodPost, "origins/{id}/scan"), v1handlers.HandlePostOriginScan(blobSvc))
+	mux.Handle(V1Route(http.MethodGet, "origins/{id}/scan"), v1handlers.HandleGetScanOrigin(blobSvc))
 
 	// middleware
-	authentication := middleware.AuthenticateRoutes(svc)
-	authorization := middleware.AuthorizeRoutes(svc)
+	authentication := middleware.AuthenticateRoutes(authSvc)
+	authorization := middleware.AuthorizeRoutes(authSvc)
 	limiter := middleware.RequestBodyLimit(maxRequestBodyBytes)
 
 	handler := authentication(authorization(mux))

@@ -10,7 +10,7 @@ import (
 	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
-func HandleGetOriginScan(svc *service.Service) http.HandlerFunc {
+func HandlePostOriginScan(svc *service.BlobService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rawID := r.PathValue("id")
 		if rawID == "" {
@@ -18,24 +18,22 @@ func HandleGetOriginScan(svc *service.Service) http.HandlerFunc {
 			return
 		}
 
-		id, err := strconv.ParseUint(rawID, 10, 64)
+		oid, err := strconv.ParseUint(rawID, 10, 64)
 		if err != nil {
 			utils.HandleError(w, r, fmt.Errorf("%w: invalid task id", service.ErrValidation))
 			return
-
 		}
 
-		task, err := svc.RetrieveTask(r.Context(), uint(id))
+		scan, err := svc.NewScanOrigin(r.Context(), uint(oid))
 		if err != nil {
 			utils.HandleError(w, r, err)
 			return
 		}
 
-		utils.RespondOK(w, r, dto.TaskResponse{
-			ID:        task.ID,
-			Type:      string(task.Type),
-			Status:    string(task.Status),
-			CreatedAt: task.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		utils.RespondOK(w, r, dto.ScanOriginResponse{
+			ID:        scan.ID,
+			Status:    string(scan.Status),
+			CreatedAt: scan.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		})
 	}
 }

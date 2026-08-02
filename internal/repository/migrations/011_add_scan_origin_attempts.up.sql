@@ -1,0 +1,1 @@
+ALTER TABLE scan_origins ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;

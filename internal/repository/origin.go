@@ -2,6 +2,9 @@ package repository
 
 import (
 	"context"
+	"fmt"
+
+	"encoding/json"
 
 	"github.com/UnivocalX/odessa/internal/storage"
 	"gorm.io/gorm"
@@ -19,7 +22,7 @@ func (r *Repository) CreateOrigin(ctx context.Context, uri string) (*Origin, err
 	origin := &Origin{
 		URI: storage.URI(uri),
 	}
-	
+
 	if err := validate.Struct(origin); err != nil {
 		return nil, err
 	}
@@ -53,4 +56,144 @@ func (r *Repository) GetOrigin(ctx context.Context, id uint) (*Origin, error) {
 	}
 
 	return &origin, nil
+}
+
+type Status string
+
+const (
+	StatusPending    Status = "pending"
+	StatusInProgress Status = "in_progress"
+	StatusCompleted  Status = "completed"
+	StatusFailed     Status = "failed"
+)
+
+type ScanOrigin struct {
+	gorm.Model
+
+	OriginID uint            `gorm:"not null;uniqueIndex"`
+	Status   Status          `gorm:"type:text;not null;default:'pending'" validate:"required,oneof=pending in_progress completed failed"`
+	Attempts int             `gorm:"not null;default:0"`
+	Results  json.RawMessage `gorm:"type:jsonb;not null" validate:"required,json"`
+}
+
+func (r *Repository) CreateScanOrigin(ctx context.Context, oid uint) (*ScanOrigin, error) {
+	scan := &ScanOrigin{
+		Status:   StatusPending,
+		OriginID: oid,
+	}
+
+	if err := validate.Struct(scan); err != nil {
+		return nil, fmt.Errorf("repository: validate scan origin: %w", err)
+	}
+
+	if err := r.DB.WithContext(ctx).Create(scan).Error; err != nil {
+		return nil, fmt.Errorf("repository: create scan origin: %w", err)
+	}
+
+	return scan, nil
+}
+
+func (r *Repository) GetScanOrigin(ctx context.Context, id uint) (*ScanOrigin, error) {
+	var scan ScanOrigin
+	if err := r.DB.WithContext(ctx).First(&scan, id).Error; err != nil {
+		return nil, fmt.Errorf("repository: get scan origin %d: %w", id, err)
+	}
+	return &scan, nil
+}
+
+func (r *Repository) ListScanOrigins(ctx context.Context) ([]ScanOrigin, error) {
+	var scans []ScanOrigin
+	if err := r.DB.WithContext(ctx).Order("created_at DESC").Find(&scans).Error; err != nil {
+		return nil, fmt.Errorf("repository: list scan origins: %w", err)
+	}
+	return scans, nil
+}
+
+// ClaimScanOrigin atomically claims up to `limit` pending scan origins by
+// transitioning them to in_progress within a transaction using
+// SELECT ... FOR UPDATE SKIP LOCKED, ensuring no two workers process the same record.
+func (r *Repository) ClaimScanOrigins(ctx context.Context, limit int) ([]ScanOrigin, error) {
+	var scans []ScanOrigin
+
+	err := r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.
+			Raw(`SELECT * FROM scan_origins
+				 WHERE status = ? AND deleted_at IS NULL
+				 ORDER BY created_at ASC
+				 LIMIT ?
+				 FOR UPDATE SKIP LOCKED`, StatusPending, limit).
+			Scan(&scans).Error; err != nil {
+			return err
+		}
+
+		if len(scans) == 0 {
+			return nil
+		}
+
+		ids := make([]uint, len(scans))
+		for i, s := range scans {
+			ids[i] = s.ID
+		}
+
+		if err := tx.
+			Model(&ScanOrigin{}).
+			Where("id IN ?", ids).
+			Update("status", StatusInProgress).Error; err != nil {
+			return err
+		}
+
+		// Update the returned structs to reflect the new status.
+		for i := range scans {
+			scans[i].Status = StatusInProgress
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("repository: claim scan origins: %w", err)
+	}
+
+	return scans, nil
+}
+
+// FailScanOrigin increments the attempt counter. If maxAttempts is reached,
+// marks the scan as failed. Otherwise, re-enqueues it as pending for retry.
+func (r *Repository) FailScanOrigin(ctx context.Context, id uint, maxAttempts int) error {
+	return r.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var scan ScanOrigin
+		if err := tx.Where("id = ? AND status = ?", id, StatusInProgress).First(&scan).Error; err != nil {
+			return fmt.Errorf("repository: fail scan origin %d: %w", id, err)
+		}
+
+		scan.Attempts++
+		if scan.Attempts >= maxAttempts {
+			scan.Status = StatusFailed
+		} else {
+			scan.Status = StatusPending
+		}
+
+		if err := tx.Save(&scan).Error; err != nil {
+			return fmt.Errorf("repository: fail scan origin %d: %w", id, err)
+		}
+		return nil
+	})
+}
+
+// CompleteScanOrigin marks a scan as completed with results.
+func (r *Repository) CompleteScanOrigin(ctx context.Context, id uint, results any) error {
+	resultsJSON, err := json.Marshal(results)
+	if err != nil {
+		return fmt.Errorf("repository: marshal scan results: %w", err)
+	}
+
+	if err := r.DB.WithContext(ctx).
+		Model(&ScanOrigin{}).
+		Where("id = ? AND status = ?", id, StatusInProgress).
+		Updates(map[string]any{
+			"status":  StatusCompleted,
+			"results": resultsJSON,
+		}).Error; err != nil {
+		return fmt.Errorf("repository: complete scan origin %d: %w", id, err)
+	}
+	return nil
 }

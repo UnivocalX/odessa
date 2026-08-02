@@ -10,7 +10,7 @@ import (
 	"github.com/UnivocalX/odessa/pkg/dto"
 )
 
-func HandleListUsers(svc *service.Service) http.HandlerFunc {
+func HandleListUsers(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		users, err := svc.ListUsers(r.Context())
 		if err != nil {
@@ -34,7 +34,7 @@ func HandleListUsers(svc *service.Service) http.HandlerFunc {
 	}
 }
 
-func HandleCreateUser(svc *service.Service) http.HandlerFunc {
+func HandleCreateUser(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req dto.CreateUserRequest
 		if err := utils.Decode(r, &req); err != nil {
@@ -51,7 +51,7 @@ func HandleCreateUser(svc *service.Service) http.HandlerFunc {
 	}
 }
 
-func HandleDeleteUser(svc *service.Service) http.HandlerFunc {
+func HandleDeleteUser(svc *service.AuthService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseUint(r.PathValue("id"), 10, 0)
 		if err != nil || id == 0 {
