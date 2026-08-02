@@ -10,7 +10,6 @@ import (
 )
 
 type Config struct {
-	Addr    string               `mapstructure:"addr" validate:"required"`
 	DSN     repository.Secret    `mapstructure:"dsn" validate:"required"`
 	HTTP    HTTPConfig           `mapstructure:"http" validate:"required"`
 	Storage config.StorageConfig `mapstructure:"storage"`
@@ -19,6 +18,7 @@ type Config struct {
 }
 
 type HTTPConfig struct {
+	Addr                string        `mapstructure:"addr" validate:"required"`
 	ReadTimeout         time.Duration `mapstructure:"read_timeout" validate:"gt=0"`
 	WriteTimeout        time.Duration `mapstructure:"write_timeout" validate:"gt=0"`
 	IdleTimeout         time.Duration `mapstructure:"idle_timeout" validate:"gt=0"`
@@ -53,13 +53,13 @@ type SMTPConfig struct {
 func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
 	v := config.NewViper()
 
-	v.SetDefault("addr", ":8080")
 	v.SetDefault("dsn", "")
 	v.SetDefault("auth.jwt_secret", "")
 	v.SetDefault("auth.access_token_lifetime", 15*time.Minute)
 	v.SetDefault("auth.refresh_token_lifetime", 30*24*time.Hour)
 	v.SetDefault("auth.reset_token_lifetime", time.Hour)
 	v.SetDefault("email.smtp.port", 587)
+	v.SetDefault("http.addr", ":8080")
 	v.SetDefault("http.read_timeout", 10*time.Second)
 	v.SetDefault("http.write_timeout", 10*time.Second)
 	v.SetDefault("http.idle_timeout", 60*time.Second)
@@ -77,7 +77,7 @@ func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
 			_ = v.BindPFlag(key, flag)
 		}
 	}
-	bindFlag("addr", "addr")
+	bindFlag("http.addr", "addr")
 	bindFlag("dsn", "dsn")
 	bindFlag("auth.jwt_secret", "jwt-secret")
 

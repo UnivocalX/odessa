@@ -1,4 +1,5 @@
-addr: ":9090"
+http:
+  addr: ":9090"
 
 storage:
   fs:
@@ -14,3 +15,10 @@ storage:
     connection_string: ""
     account_key: ""
     use_default_credential: false
+
+worker:
+  poll_interval: 5s
+  max_poll_interval: 2m
+  concurrency: 4
+  max_attempts: 3
+  drain_timeout: 30s

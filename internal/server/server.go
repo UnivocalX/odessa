@@ -8,7 +8,8 @@ import (
 	"github.com/UnivocalX/odessa/internal/service"
 )
 
-type Options struct {
+type Config struct {
+	Addr                string
 	ReadTimeout         time.Duration
 	WriteTimeout        time.Duration
 	IdleTimeout         time.Duration
@@ -16,21 +17,16 @@ type Options struct {
 	MaxRequestBodyBytes int64
 }
 
-type Config struct {
-	Addr string
-	HTTP Options
-}
-
 func New(authSvc *service.AuthService, blobSvc *service.BlobService, cfg Config) *http.Server {
 	mux := http.NewServeMux()
-	handler := api.Register(mux, authSvc, blobSvc, cfg.HTTP.MaxRequestBodyBytes)
+	handler := api.Register(mux, authSvc, blobSvc, cfg.MaxRequestBodyBytes)
 
 	return &http.Server{
 		Addr:           cfg.Addr,
 		Handler:        handler,
-		ReadTimeout:    cfg.HTTP.ReadTimeout,
-		WriteTimeout:   cfg.HTTP.WriteTimeout,
-		IdleTimeout:    cfg.HTTP.IdleTimeout,
-		MaxHeaderBytes: cfg.HTTP.MaxHeaderBytes,
+		ReadTimeout:    cfg.ReadTimeout,
+		WriteTimeout:   cfg.WriteTimeout,
+		IdleTimeout:    cfg.IdleTimeout,
+		MaxHeaderBytes: cfg.MaxHeaderBytes,
 	}
 }

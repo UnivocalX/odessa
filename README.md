@@ -43,16 +43,15 @@ Configuration precedence is:
 3. YAML configuration file
 4. Built-in defaults
 
-### Configuration file
+### Server configuration file
 
 Create `config.yaml`:
 
 ```yaml
-addr: ":8080"
-
 dsn: "postgres://odessa:change-me@database:5432/odessa?sslmode=disable"
 
 http:
+  addr: ":8080"
   read_timeout: 10s
   write_timeout: 10s
   idle_timeout: 60s
@@ -66,7 +65,6 @@ auth:
   refresh_token_lifetime: 720h
   reset_token_lifetime: 1h
   password_reset_url: "https://app.example.com/reset-password"
-
 
 email:
   smtp:
@@ -105,8 +103,8 @@ openssl rand -hex 64
 ```
 
 ```sh
-ODESSA_ADDR=:8080
 ODESSA_DSN=postgres://odessa:change-me@database:5432/odessa?sslmode=disable
+ODESSA_HTTP_ADDR=:8080
 ODESSA_AUTH_JWT_SECRET=REPLACE_WITH_A_LONG_RANDOM_SECRET
 ODESSA_AUTH_ACCESS_TOKEN_LIFETIME=15m
 ODESSA_AUTH_REFRESH_TOKEN_LIFETIME=720h
@@ -118,6 +116,7 @@ ODESSA_EMAIL_SMTP_USERNAME=smtp-user
 ODESSA_EMAIL_SMTP_PASSWORD=REPLACE_WITH_SMTP_PASSWORD
 ODESSA_EMAIL_SMTP_FROM=no-reply@example.com
 
+ODESSA_HTTP_ADDR=:8080
 ODESSA_HTTP_READ_TIMEOUT=10s
 ODESSA_HTTP_WRITE_TIMEOUT=10s
 ODESSA_HTTP_IDLE_TIMEOUT=60s
@@ -186,4 +185,7 @@ Migrations are embedded and applied at startup. New authentication tables and th
 ```sh
 go build -o bin/odessa-server ./cmd/server
 ./bin/odessa-server --config config.yaml
+
+go build -o bin/odessa-worker ./cmd/worker
+./bin/odessa-worker --config config.yaml
 ```

@@ -74,14 +74,12 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	srv := server.New(authSvc, blobSvc, server.Config{
-		Addr: cfg.Addr,
-		HTTP: server.Options{
-			ReadTimeout:         cfg.HTTP.ReadTimeout,
-			WriteTimeout:        cfg.HTTP.WriteTimeout,
-			IdleTimeout:         cfg.HTTP.IdleTimeout,
-			MaxHeaderBytes:      cfg.HTTP.MaxHeaderBytes,
-			MaxRequestBodyBytes: cfg.HTTP.MaxRequestBodyBytes,
-		},
+		Addr:                cfg.HTTP.Addr,
+		ReadTimeout:         cfg.HTTP.ReadTimeout,
+		WriteTimeout:        cfg.HTTP.WriteTimeout,
+		IdleTimeout:         cfg.HTTP.IdleTimeout,
+		MaxHeaderBytes:      cfg.HTTP.MaxHeaderBytes,
+		MaxRequestBodyBytes: cfg.HTTP.MaxRequestBodyBytes,
 	})
 
 	go func() {
@@ -91,7 +89,7 @@ func run(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	slog.Info("server started", "addr", cfg.Addr)
+	slog.Info("server started", "addr", cfg.HTTP.Addr)
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
