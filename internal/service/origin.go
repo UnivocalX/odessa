@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -62,14 +63,22 @@ func (s *BlobService) RetrieveScanOrigin(ctx context.Context, oid uint) (*reposi
 	return scan, nil
 }
 
-func (s *BlobService) NewScanOrigin(ctx context.Context, oid uint) (*repository.ScanOrigin, error) {
+func (s *BlobService) NewScanOrigin(ctx context.Context, oid uint, rules *repository.LabelRules) (*repository.ScanOrigin, error) {
 	// Verify the origin exists.
 	_, err := s.repo.GetOrigin(ctx, oid)
 	if err != nil {
 		return nil, fmt.Errorf("%w: origin %d", ErrNotFound, oid)
 	}
 
-	task, err := s.repo.CreateScanOrigin(ctx, oid)
+	var rulesJSON json.RawMessage
+	if rules != nil {
+		rulesJSON, err = json.Marshal(rules)
+		if err != nil {
+			return nil, fmt.Errorf("%w: invalid rules", ErrValidation)
+		}
+	}
+
+	task, err := s.repo.CreateScanOrigin(ctx, oid, rulesJSON)
 
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to create scan origin", "origin_id", oid, "error", err)

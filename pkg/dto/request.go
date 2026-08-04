@@ -1,6 +1,8 @@
 package dto
 
-import "github.com/UnivocalX/odessa/internal/repository"
+import (
+	"github.com/UnivocalX/odessa/internal/repository"
+)
 
 type PostOriginRequest struct {
 	URI string `json:"uri" validate:"required,url"`
@@ -8,6 +10,15 @@ type PostOriginRequest struct {
 
 type PostBlobRequest struct {
 	URI string `json:"uri" validate:"required,url"`
+}
+
+type PostLabelRequest struct {
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description"`
+}
+
+type PostScanOriginRequest struct {
+	Rules *repository.LabelRules `json:"rules,omitempty"`
 }
 
 type CreateUserRequest struct {
@@ -41,4 +52,16 @@ type PasswordResetRequest struct {
 type PasswordResetConfirmRequest struct {
 	Token    string            `json:"token" validate:"required"`
 	Password repository.Secret `json:"password" validate:"required,min=8,max=72"`
+}
+
+type SearchBlobsRequest struct {
+	Hashes      []string          `json:"hashes,omitempty"`
+	MimeTypes   []string          `json:"mime_types,omitempty"`
+	Labels      []string          `json:"labels,omitempty"`
+	LabelValues map[string]string `json:"label_values,omitempty"`
+	URIPattern  string            `json:"uri_pattern,omitempty"`
+	MinSize     *int64            `json:"min_size,omitempty"`
+	MaxSize     *int64            `json:"max_size,omitempty"`
+	Cursor      uint              `json:"cursor,omitempty"`
+	Limit       int               `json:"limit,omitempty" validate:"omitempty,min=1,max=100"`
 }

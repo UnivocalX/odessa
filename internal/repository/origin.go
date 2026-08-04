@@ -70,16 +70,38 @@ const (
 type ScanOrigin struct {
 	gorm.Model
 
-	OriginID uint            `gorm:"not null;uniqueIndex"`
-	Status   Status          `gorm:"type:text;not null;default:'pending'" validate:"required,oneof=pending in_progress completed failed"`
-	Attempts int             `gorm:"not null;default:0"`
-	Results  json.RawMessage `gorm:"type:jsonb;not null" validate:"required,json"`
+	OriginID   uint            `gorm:"not null;uniqueIndex"`
+	Status     Status          `gorm:"type:text;not null;default:'pending'" validate:"required,oneof=pending in_progress completed failed"`
+	Attempts   int             `gorm:"not null;default:0"`
+	LabalRules json.RawMessage `gorm:"type:jsonb;not null;default:'{}'" validate:"json"`
+	Results    json.RawMessage `gorm:"type:jsonb;not null" validate:"required,json"`
 }
 
-func (r *Repository) CreateScanOrigin(ctx context.Context, oid uint) (*ScanOrigin, error) {
+// LabelRules maps glob patterns to label assignments.
+// The key "*" applies to all files; any other key is a filepath.Match pattern.
+//
+// Example:
+//
+//	{
+//	  "*": [{"label": "source", "value": "photos"}],
+//	  "*.jpg": [{"label": "type", "value": "image"}]
+//	}
+type LabelRules map[string][]LabelAssignment
+
+type LabelAssignment struct {
+	Label string `json:"label" validate:"required"`
+	Value string `json:"value"`
+}
+
+func (r *Repository) CreateScanOrigin(ctx context.Context, oid uint, rules json.RawMessage) (*ScanOrigin, error) {
+	if rules == nil {
+		rules = json.RawMessage(`{}`)
+	}
+
 	scan := &ScanOrigin{
-		Status:   StatusPending,
-		OriginID: oid,
+		Status:     StatusPending,
+		OriginID:   oid,
+		LabalRules: rules,
 	}
 
 	if err := validate.Struct(scan); err != nil {

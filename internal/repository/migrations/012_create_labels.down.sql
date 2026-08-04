@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS blob_labels;
+DROP TABLE IF EXISTS labels;

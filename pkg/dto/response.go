@@ -46,3 +46,32 @@ type ScanOriginResponse struct {
 	Status    string `json:"status"`
 	CreatedAt string `json:"created_at"`
 }
+
+type LabelResponse struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"Name"`
+	Description string `json:"description"`
+}
+
+type ListLabelsResponse struct {
+	Labels []LabelResponse `json:"labels"`
+}
+
+type BlobResponse struct {
+	ID       uint               `json:"id"`
+	Hash     string             `json:"hash"`
+	MimeType string             `json:"mime_type"`
+	Size     int64              `json:"size"`
+	Labels   []BlobLabelResponse `json:"labels,omitempty"`
+}
+
+type BlobLabelResponse struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type SearchBlobsResponse struct {
+	Blobs      []BlobResponse `json:"blobs"`
+	NextCursor uint           `json:"next_cursor"`
+	HasMore    bool           `json:"has_more"`
+}

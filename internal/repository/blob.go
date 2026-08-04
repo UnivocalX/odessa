@@ -12,10 +12,11 @@ import (
 type Blob struct {
 	gorm.Model
 
-	Hash      string     `gorm:"not null;uniqueIndex" validate:"required"`
-	MimeType  string     `gorm:"not null;default:''" validate:"required"`
-	Size      int64      `gorm:"not null;default:0" validate:"gte=0"`
-	Locations []Location `gorm:"foreignKey:BlobID;constraint:OnDelete:CASCADE" validate:"dive"`
+	Hash      string      `gorm:"not null;uniqueIndex" validate:"required"`
+	MimeType  string      `gorm:"not null;default:''" validate:"required"`
+	Size      int64       `gorm:"not null;default:0" validate:"gte=0"`
+	Locations []Location  `gorm:"foreignKey:BlobID;constraint:OnDelete:CASCADE" validate:"dive"`
+	Labels    []BlobLabel `gorm:"foreignKey:BlobID;constraint:OnDelete:CASCADE" validate:"dive"`
 }
 
 type Location struct {
@@ -83,4 +84,12 @@ func (r *Repository) BatchCreateBlobs(ctx context.Context, inputs []BlobBatchCre
 	}
 
 	return result, nil
+}
+
+func (r *Repository) GetBlobByHash(ctx context.Context, hash string) (*Blob, error) {
+	var blob Blob
+	if err := r.DB.WithContext(ctx).Where("hash = ?", hash).First(&blob).Error; err != nil {
+		return nil, err
+	}
+	return &blob, nil
 }

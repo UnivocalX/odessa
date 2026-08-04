@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -24,7 +25,15 @@ func HandlePostOriginScan(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
-		scan, err := svc.NewScanOrigin(r.Context(), uint(oid))
+		var req dto.PostScanOriginRequest
+		if r.Body != nil && r.ContentLength > 0 {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				utils.HandleError(w, r, fmt.Errorf("%w: %s", service.ErrValidation, err))
+				return
+			}
+		}
+
+		scan, err := svc.NewScanOrigin(r.Context(), uint(oid), req.Rules)
 		if err != nil {
 			utils.HandleError(w, r, err)
 			return
