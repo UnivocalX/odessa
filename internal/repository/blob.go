@@ -88,7 +88,24 @@ func (r *Repository) BatchCreateBlobs(ctx context.Context, inputs []BlobBatchCre
 
 func (r *Repository) GetBlobByHash(ctx context.Context, hash string) (*Blob, error) {
 	var blob Blob
-	if err := r.DB.WithContext(ctx).Where("hash = ?", hash).First(&blob).Error; err != nil {
+	if err := r.DB.WithContext(ctx).
+		Preload("Locations").
+		Preload("Labels").
+		Preload("Labels.Label").
+		Where("hash = ?", hash).
+		First(&blob).Error; err != nil {
+		return nil, err
+	}
+	return &blob, nil
+}
+
+func (r *Repository) GetBlobByID(ctx context.Context, id uint) (*Blob, error) {
+	var blob Blob
+	if err := r.DB.WithContext(ctx).
+		Preload("Locations").
+		Preload("Labels").
+		Preload("Labels.Label").
+		First(&blob, id).Error; err != nil {
 		return nil, err
 	}
 	return &blob, nil

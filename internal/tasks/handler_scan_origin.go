@@ -168,8 +168,8 @@ func (h *ScanOriginHandler) persistBlobs(ctx context.Context, log *slog.Logger, 
 // applyLabelRules. A nil/empty rules field is a no-op.
 func (h *ScanOriginHandler) applyRules(ctx context.Context, log *slog.Logger, scan repository.ScanOrigin, files []fileInfo, results *ScanResults) error {
 	var rules repository.LabelRules
-	if len(scan.LabalRules) > 0 {
-		if err := json.Unmarshal(scan.LabalRules, &rules); err != nil {
+	if len(scan.Rules) > 0 {
+		if err := json.Unmarshal(scan.Rules, &rules); err != nil {
 			return fmt.Errorf("parse label rules: %w", err)
 		}
 	}

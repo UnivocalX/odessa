@@ -70,11 +70,11 @@ const (
 type ScanOrigin struct {
 	gorm.Model
 
-	OriginID   uint            `gorm:"not null;uniqueIndex"`
-	Status     Status          `gorm:"type:text;not null;default:'pending'" validate:"required,oneof=pending in_progress completed failed"`
-	Attempts   int             `gorm:"not null;default:0"`
-	LabalRules json.RawMessage `gorm:"type:jsonb;not null;default:'{}'" validate:"json"`
-	Results    json.RawMessage `gorm:"type:jsonb;not null" validate:"required,json"`
+	OriginID uint            `gorm:"not null;uniqueIndex"`
+	Status   Status          `gorm:"type:text;not null;default:'pending'" validate:"required,oneof=pending in_progress completed failed"`
+	Attempts int             `gorm:"not null;default:0"`
+	Rules    json.RawMessage `gorm:"column:rules;type:jsonb;not null;default:'{}'" validate:"json"`
+	Results  json.RawMessage `gorm:"type:jsonb;not null;default:'{}'" validate:"required,json"`
 }
 
 // LabelRules maps glob patterns to label assignments.
@@ -99,9 +99,10 @@ func (r *Repository) CreateScanOrigin(ctx context.Context, oid uint, rules json.
 	}
 
 	scan := &ScanOrigin{
-		Status:     StatusPending,
-		OriginID:   oid,
-		LabalRules: rules,
+		Status:   StatusPending,
+		OriginID: oid,
+		Rules:    rules,
+		Results:  json.RawMessage(`{}`),
 	}
 
 	if err := validate.Struct(scan); err != nil {

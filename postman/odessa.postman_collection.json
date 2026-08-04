@@ -12,7 +12,8 @@
     { "key": "admin_email", "value": "admin@odessa.com" },
     { "key": "admin_password", "value": "" },
     { "key": "origin_id", "value": "1" },
-    { "key": "user_id", "value": "1" }
+    { "key": "user_id", "value": "1" },
+    { "key": "blob_hash", "value": "" }
   ],
   "item": [
     {
@@ -201,6 +202,37 @@
             "method": "GET",
             "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
             "url": { "raw": "{{base_url}}/api/v1/origins/{{origin_id}}/scan", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins", "{{origin_id}}", "scan" ] }
+          }
+        }
+      ]
+    }
+    ,
+    {
+      "name": "Blobs",
+      "item": [
+        {
+          "name": "List blobs",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "url": { "raw": "{{base_url}}/api/v1/blobs?limit=25", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "blobs" ], "query": [ { "key": "limit", "value": "25" } ] }
+          }
+        },
+        {
+          "name": "Get blob by hash",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "url": { "raw": "{{base_url}}/api/v1/blobs/{{blob_hash}}", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "blobs", "{{blob_hash}}" ] }
+          }
+        },
+        {
+          "name": "Search blobs",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"mime_types\": [\"application/json\"],\n  \"limit\": 25\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/blobs/search", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "blobs", "search" ] }
           }
         }
       ]

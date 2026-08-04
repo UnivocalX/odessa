@@ -28,11 +28,27 @@ Protected endpoints require `Authorization: Bearer <access-token>`:
 - `POST /api/logout`
 - `POST /api/password/change`
 - `POST /api/account/disable`
+- `GET /api/v1/blobs` (authenticated users, supports pagination via `cursor` and `limit` query parameters)
+- `GET /api/v1/blobs/{hash}` (authenticated users)
 - `POST /api/v1/users` (administrators with `users:manage` permission)
 - `GET /api/v1/users` (authenticated users)
 - `DELETE /api/v1/users/{id}` (authenticated users)
 
 Origins and related data are shared resources in the current product model. The initial administrator account is created during bootstrap. The `admin` role has the initial `users:manage` permission; regular users do not have it.
+
+### List blobs
+
+The list blobs endpoint returns a paginated list of stored blobs. It uses cursor-based pagination with the following query parameters:
+
+- `cursor`: optional blob ID to start after
+- `limit`: optional page size, must be a positive integer
+
+Example:
+
+```sh
+curl -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "http://localhost:8080/api/v1/blobs?limit=50"
+```
 
 ## Configuration
 

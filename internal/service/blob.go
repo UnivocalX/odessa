@@ -16,3 +16,23 @@ func (s *BlobService) SearchBlobs(ctx context.Context, opts ...repository.Search
 	}
 	return result, nil
 }
+
+// RetrieveBlobByHash returns a blob by its hash.
+func (s *BlobService) RetrieveBlobByHash(ctx context.Context, hash string) (*repository.Blob, error) {
+	blob, err := s.repo.GetBlobByHash(ctx, hash)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to retrieve blob by hash", "error", err, "hash", hash)
+		return nil, err
+	}
+	return blob, nil
+}
+
+// RetrieveBlob returns a blob by its ID.
+func (s *BlobService) RetrieveBlob(ctx context.Context, id uint) (*repository.Blob, error) {
+	blob, err := s.repo.GetBlobByID(ctx, id)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to retrieve blob", "error", err)
+		return nil, err
+	}
+	return blob, nil
+}
