@@ -36,7 +36,9 @@ func HandleGetScanOrigin(svc *service.BlobService) http.HandlerFunc {
 		slog.InfoContext(r.Context(), "retrieve origin scan success", "scan_id", scan.ID, "status", string(scan.Status))
 		utils.RespondOK(w, r, dto.ScanOriginResponse{
 			ID:        scan.ID,
+			OriginID:  scan.OriginID,
 			Status:    string(scan.Status),
+			Attempts:  scan.Attempts,
 			CreatedAt: scan.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		})
 	}

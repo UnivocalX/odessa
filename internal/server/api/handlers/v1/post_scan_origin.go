@@ -49,7 +49,9 @@ func HandlePostOriginScan(svc *service.BlobService) http.HandlerFunc {
 		slog.InfoContext(r.Context(), "create origin scan success", "scan_id", scan.ID, "origin_id", rawID)
 		utils.RespondOK(w, r, dto.ScanOriginResponse{
 			ID:        scan.ID,
+			OriginID:  scan.OriginID,
 			Status:    string(scan.Status),
+			Attempts:  scan.Attempts,
 			CreatedAt: scan.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		})
 	}
@@ -70,11 +72,18 @@ func HandleCancelOriginScan(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
-		if err := svc.CancelScanOrigin(r.Context(), uint(oid)); err != nil {
+		scan, err := svc.CancelScanOrigin(r.Context(), uint(oid))
+		if err != nil {
 			utils.HandleError(w, r, err)
 			return
 		}
 
-		utils.RespondOK(w, r, dto.Response{Message: "scan cancelled"})
+		utils.RespondOK(w, r, dto.ScanOriginResponse{
+			ID:        scan.ID,
+			OriginID:  scan.OriginID,
+			Status:    string(scan.Status),
+			Attempts:  scan.Attempts,
+			CreatedAt: scan.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		})
 	}
 }

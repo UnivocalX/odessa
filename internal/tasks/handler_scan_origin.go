@@ -138,7 +138,7 @@ func (h *ScanOriginHandler) Handle(ctx context.Context, job Job) (any, error) {
 
 	if procCtx.Err() != nil {
 		log.Info("aborting scan after cancellation", "scan_id", scan.ID)
-		return nil, nil
+		return results, ErrScanCancelled
 	}
 
 	// Upsert blobs and their storage locations.
@@ -148,7 +148,7 @@ func (h *ScanOriginHandler) Handle(ctx context.Context, job Job) (any, error) {
 
 	if procCtx.Err() != nil {
 		log.Info("aborting scan after cancellation (persist)", "scan_id", scan.ID)
-		return nil, nil
+		return results, ErrScanCancelled
 	}
 
 	// Apply label rules (pattern → label assignments).
@@ -158,7 +158,7 @@ func (h *ScanOriginHandler) Handle(ctx context.Context, job Job) (any, error) {
 
 	if procCtx.Err() != nil {
 		log.Info("aborting scan after cancellation (apply rules)", "scan_id", scan.ID)
-		return nil, nil
+		return results, ErrScanCancelled
 	}
 
 	if results.Created == 0 {
@@ -177,7 +177,7 @@ func (h *ScanOriginHandler) startCancelWatcher(scanID uint, cancel context.Cance
 	doneCh := make(chan struct{})
 
 	// Immediate check to avoid waiting for the first tick.
-	if s, err := h.repo.GetScanOrigin(context.Background(), scanID); err == nil {
+	if s, err := h.repo.GetScanOriginByID(context.Background(), scanID); err == nil {
 		if s.Status == repository.StatusCancelled {
 			slog.Info("scan cancelled before processing (watcher immediate)", "scan_id", scanID)
 			cancel()
@@ -193,7 +193,7 @@ func (h *ScanOriginHandler) startCancelWatcher(scanID uint, cancel context.Cance
 			case <-doneCh:
 				return
 			case <-ticker.C:
-				s, err := h.repo.GetScanOrigin(context.Background(), scanID)
+				s, err := h.repo.GetScanOriginByID(context.Background(), scanID)
 				if err != nil {
 					continue
 				}

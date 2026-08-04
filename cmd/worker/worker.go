@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"math"
 	"math/rand/v2"
@@ -109,6 +110,11 @@ func (w *Worker) poll(ctx context.Context) int {
 func (w *Worker) process(ctx context.Context, job tasks.Job, handler tasks.Handler) {
 	results, err := handler.Handle(ctx, job)
 	if err != nil {
+		// Cancelled scans already have the correct status in the DB; skip complete/fail.
+		if errors.Is(err, tasks.ErrScanCancelled) {
+			slog.Info("job cancelled", "type", job.Type, "job_id", job.ID)
+			return
+		}
 		slog.Error("job failed", "type", job.Type, "job_id", job.ID, "attempt", job.Attempt+1, "error", err)
 		if failErr := handler.Fail(ctx, job.ID, w.cfg.MaxAttempts); failErr != nil {
 			slog.Error("mark job failed", "type", job.Type, "job_id", job.ID, "error", failErr)

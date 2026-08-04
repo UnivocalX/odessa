@@ -1,9 +1,13 @@
 package tasks
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
+
+// ErrScanCancelled is returned by Handle when a scan was cancelled.
+var ErrScanCancelled = errors.New("scan cancelled")
 
 // MultiError represents multiple keyed errors.
 // It supports errors.Is/errors.As via the Go 1.20+ multi-unwrap interface.

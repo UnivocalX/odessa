@@ -47,7 +47,9 @@ type ListUsersResponse struct {
 
 type ScanOriginResponse struct {
 	ID        uint   `json:"id"`
+	OriginID  uint   `json:"origin_id"`
 	Status    string `json:"status"`
+	Attempts  int    `json:"attempts"`
 	CreatedAt string `json:"created_at"`
 }
 

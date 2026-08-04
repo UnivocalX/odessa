@@ -140,6 +140,17 @@ func (r *Repository) GetScanOrigin(ctx context.Context, originID uint) (*ScanOri
 	return &scan, nil
 }
 
+func (r *Repository) GetScanOriginByID(ctx context.Context, id uint) (*ScanOrigin, error) {
+	var scan ScanOrigin
+	err := r.DB.WithContext(ctx).
+		Where("id = ?", id).
+		First(&scan).Error
+	if err != nil {
+		return nil, fmt.Errorf("repository: get scan origin by id %d: %w", id, err)
+	}
+	return &scan, nil
+}
+
 func (r *Repository) ListScanOrigins(ctx context.Context) ([]ScanOrigin, error) {
 	var scans []ScanOrigin
 	if err := r.DB.WithContext(ctx).Order("created_at DESC").Find(&scans).Error; err != nil {
