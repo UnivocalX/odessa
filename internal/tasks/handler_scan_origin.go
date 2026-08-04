@@ -108,15 +108,15 @@ func (h *ScanOriginHandler) Handle(ctx context.Context, job Job) (any, error) {
 	// Run the scan pipeline: list, hash, and detect MIME types.
 	files, scanErr := ScanOriginPipeline(ctx, h.reg, string(origin.URI))
 	results := &ScanResults{}
-	collectScanErrors(log, results, scanErr)
+	collectScanErrors(results, scanErr)
 
 	// Upsert blobs and their storage locations.
-	if err := h.persistBlobs(ctx, log, files, results); err != nil {
+	if err := h.persistBlobs(ctx, files, results); err != nil {
 		return nil, err
 	}
 
 	// Apply label rules (pattern → label assignments).
-	if err := h.applyRules(ctx, log, scan, files, results); err != nil {
+	if err := h.applyRules(ctx, origin, scan, files, results); err != nil {
 		return nil, err
 	}
 
@@ -131,7 +131,7 @@ func (h *ScanOriginHandler) Handle(ctx context.Context, job Job) (any, error) {
 // collectScanErrors extracts per-file errors from the pipeline's MultiError
 // and records them in the results. Each error is logged individually so
 // failures are visible in the worker's log output.
-func collectScanErrors(log *slog.Logger, results *ScanResults, err error) {
+func collectScanErrors(results *ScanResults, err error) {
 	var scanErr *MultiError
 	if !errors.As(err, &scanErr) {
 		return
@@ -140,14 +140,14 @@ func collectScanErrors(log *slog.Logger, results *ScanResults, err error) {
 	for uri, e := range scanErr.Errs {
 		msg := fmt.Sprintf("%s: %s", uri, e)
 		results.Errors = append(results.Errors, msg)
-		log.Warn("scan file error", "uri", uri, "error", e)
+		slog.Warn("scan file error", "uri", uri, "error", e)
 	}
 }
 
 // persistBlobs upserts the discovered files as blobs with their storage
 // locations. Errors from individual upserts are non-fatal and accumulated
 // in results.
-func (h *ScanOriginHandler) persistBlobs(ctx context.Context, log *slog.Logger, files []fileInfo, results *ScanResults) error {
+func (h *ScanOriginHandler) persistBlobs(ctx context.Context, files []fileInfo, results *ScanResults) error {
 	if len(files) == 0 {
 		return nil
 	}
@@ -159,24 +159,42 @@ func (h *ScanOriginHandler) persistBlobs(ctx context.Context, log *slog.Logger, 
 	results.Failed += batch.Failed
 	for _, e := range batch.Errors {
 		results.Errors = append(results.Errors, e)
-		log.Warn("persist blob error", "error", e)
+		slog.Warn("persist blob error", "error", e)
 	}
 	return nil
 }
 
-// applyRules parses the scan's label rules JSON and delegates to
-// applyLabelRules. A nil/empty rules field is a no-op.
-func (h *ScanOriginHandler) applyRules(ctx context.Context, log *slog.Logger, scan repository.ScanOrigin, files []fileInfo, results *ScanResults) error {
+// applyRules resolves the effective label rules by merging the origin's
+// default rules with any scan-level overrides (scan rules take precedence
+// for the same glob pattern), then delegates to applyLabelRules.
+func (h *ScanOriginHandler) applyRules(ctx context.Context, origin *repository.Origin, scan repository.ScanOrigin, files []fileInfo, results *ScanResults) error {
+	// Start with the origin's default rules.
 	var rules repository.LabelRules
-	if len(scan.Rules) > 0 {
-		if err := json.Unmarshal(scan.Rules, &rules); err != nil {
-			return fmt.Errorf("parse label rules: %w", err)
+	if len(origin.Rules) > 0 {
+		if err := json.Unmarshal(origin.Rules, &rules); err != nil {
+			return fmt.Errorf("parse origin label rules: %w", err)
 		}
 	}
+
+	// Merge scan-level overrides: same pattern key replaces origin's.
+	if len(scan.Rules) > 0 {
+		var scanRules repository.LabelRules
+		if err := json.Unmarshal(scan.Rules, &scanRules); err != nil {
+			return fmt.Errorf("parse scan label rules: %w", err)
+		}
+		if rules == nil {
+			rules = scanRules
+		} else {
+			for pattern, assignments := range scanRules {
+				rules[pattern] = assignments
+			}
+		}
+	}
+
 	if len(rules) == 0 {
 		return nil
 	}
-	labelErrs := h.applyLabelRules(ctx, log, files, rules)
+	labelErrs := h.applyLabelRules(ctx, files, rules)
 	results.Failed += len(labelErrs)
 	results.Errors = append(results.Errors, labelErrs...)
 	return nil
@@ -267,10 +285,10 @@ func processFile(r io.ReadCloser) (hash string, mimeType string, size int64, err
 //     so we never hold millions of blob records in memory.
 //
 // All errors are non-fatal, logged, and returned as string slices.
-func (h *ScanOriginHandler) applyLabelRules(ctx context.Context, log *slog.Logger, files []fileInfo, rules repository.LabelRules) []string {
+func (h *ScanOriginHandler) applyLabelRules(ctx context.Context, files []fileInfo, rules repository.LabelRules) []string {
 	var errs []string
 
-	labelIDs, resolveErrs := h.resolveLabelIDs(ctx, log, rules)
+	labelIDs, resolveErrs := h.resolveLabelIDs(ctx, rules)
 	errs = append(errs, resolveErrs...)
 
 	hashMap, allHashes := groupFilesByHash(files, rules)
@@ -295,7 +313,7 @@ func (h *ScanOriginHandler) applyLabelRules(ctx context.Context, log *slog.Logge
 		) {
 			if err != nil {
 				msg := fmt.Sprintf("search blobs: %s", err)
-				log.Error("search blobs failed", "error", err, "chunk_start", i)
+				slog.Error("search blobs failed", "error", err, "chunk_start", i)
 				errs = append(errs, msg)
 				break
 			}
@@ -330,12 +348,12 @@ func (h *ScanOriginHandler) applyLabelRules(ctx context.Context, log *slog.Logge
 			result, err := h.repo.BatchAssignLabels(ctx, inputs)
 			if err != nil {
 				msg := fmt.Sprintf("batch assign labels: %s", err)
-				log.Error("batch assign labels failed", "error", err)
+				slog.Error("batch assign labels failed", "error", err)
 				errs = append(errs, msg)
 				continue
 			}
 			for _, e := range result.Errors {
-				log.Warn("label assignment error", "error", e)
+				slog.Warn("label assignment error", "error", e)
 			}
 			errs = append(errs, result.Errors...)
 		}
@@ -355,7 +373,7 @@ func (h *ScanOriginHandler) applyLabelRules(ctx context.Context, log *slog.Logge
 
 // resolveLabelIDs looks up each unique label name referenced in the rules
 // and returns a name→ID map. Unknown labels are logged and skipped.
-func (h *ScanOriginHandler) resolveLabelIDs(ctx context.Context, log *slog.Logger, rules repository.LabelRules) (map[string]uint, []string) {
+func (h *ScanOriginHandler) resolveLabelIDs(ctx context.Context, rules repository.LabelRules) (map[string]uint, []string) {
 	var errs []string
 	labelIDs := make(map[string]uint)
 	for _, assignments := range rules {
@@ -366,7 +384,7 @@ func (h *ScanOriginHandler) resolveLabelIDs(ctx context.Context, log *slog.Logge
 			label, err := h.repo.GetLabelByName(ctx, a.Label)
 			if err != nil {
 				msg := fmt.Sprintf("label %q not found: %s", a.Label, err)
-				log.Warn("resolve label failed", "label", a.Label, "error", err)
+				slog.Warn("resolve label failed", "label", a.Label, "error", err)
 				errs = append(errs, msg)
 				continue
 			}

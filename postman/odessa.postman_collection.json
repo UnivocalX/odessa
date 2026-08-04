@@ -178,8 +178,17 @@
           "request": {
             "method": "POST",
             "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"uri\": \"https://example.com/data\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"uri\": \"https://example.com/data\",\n  \"rules\": {\n    \"*\": [{\"label\": \"source\", \"value\": \"example\"}]\n  }\n}" },
             "url": { "raw": "{{base_url}}/api/v1/origins", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins" ] }
+          }
+        },
+        {
+          "name": "Update origin rules",
+          "request": {
+            "method": "PUT",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"rules\": {\n    \"*\": [{\"label\": \"source\", \"value\": \"photos\"}],\n    \"*.jpg\": [{\"label\": \"type\", \"value\": \"image\"}]\n  }\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/origins/{{origin_id}}/rules", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins", "{{origin_id}}", "rules" ] }
           }
         },
         {
@@ -192,7 +201,8 @@
           ],
           "request": {
             "method": "POST",
-            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"rules\": {\n    \"*.png\": [{\"label\": \"type\", \"value\": \"png-image\"}]\n  }\n}" },
             "url": { "raw": "{{base_url}}/api/v1/origins/{{origin_id}}/scan", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins", "{{origin_id}}", "scan" ] }
           }
         },
@@ -233,6 +243,28 @@
             "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
             "body": { "mode": "raw", "raw": "{\n  \"mime_types\": [\"application/json\"],\n  \"limit\": 25\n}" },
             "url": { "raw": "{{base_url}}/api/v1/blobs/search", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "blobs", "search" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Labels",
+      "item": [
+        {
+          "name": "List labels",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "url": { "raw": "{{base_url}}/api/v1/labels", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "labels" ] }
+          }
+        },
+        {
+          "name": "Create label",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"source\",\n  \"description\": \"Data source identifier\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/labels", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "labels" ] }
           }
         }
       ]

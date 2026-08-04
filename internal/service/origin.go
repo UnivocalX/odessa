@@ -22,7 +22,7 @@ func (s *BlobService) ListOrigins(ctx context.Context) ([]repository.Origin, err
 
 // RegisterOrigin validates the URI resolves to a configured storage backend,
 // checks that the location is accessible, then persists the origin.
-func (s *BlobService) RegisterOrigin(ctx context.Context, uri string) (*repository.Origin, error) {
+func (s *BlobService) RegisterOrigin(ctx context.Context, uri string, rules *repository.LabelRules) (*repository.Origin, error) {
 	store, err := s.reg.Resolve(uri)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedBackend, uri)
@@ -37,7 +37,15 @@ func (s *BlobService) RegisterOrigin(ctx context.Context, uri string) (*reposito
 		return nil, fmt.Errorf("%w: %s", ErrLocationNotFound, uri)
 	}
 
-	origin, err := s.repo.CreateOrigin(ctx, uri)
+	var rulesJSON json.RawMessage
+	if rules != nil {
+		rulesJSON, err = json.Marshal(rules)
+		if err != nil {
+			return nil, fmt.Errorf("%w: invalid rules", ErrValidation)
+		}
+	}
+
+	origin, err := s.repo.CreateOrigin(ctx, uri, rulesJSON)
 	if err != nil {
 		if errors.Is(err, repository.ErrAlreadyExists) {
 			return nil, fmt.Errorf("%w: %s", ErrAlreadyExists, uri)
@@ -53,6 +61,28 @@ func (s *BlobService) RegisterOrigin(ctx context.Context, uri string) (*reposito
 	}
 
 	return origin, nil
+}
+
+// UpdateOriginRules replaces the label rules on an existing origin.
+func (s *BlobService) UpdateOriginRules(ctx context.Context, oid uint, rules *repository.LabelRules) error {
+	_, err := s.repo.GetOrigin(ctx, oid)
+	if err != nil {
+		return fmt.Errorf("%w: origin %d", ErrNotFound, oid)
+	}
+
+	var rulesJSON json.RawMessage
+	if rules != nil {
+		rulesJSON, err = json.Marshal(rules)
+		if err != nil {
+			return fmt.Errorf("%w: invalid rules", ErrValidation)
+		}
+	}
+
+	if err := s.repo.UpdateOriginRules(ctx, oid, rulesJSON); err != nil {
+		slog.ErrorContext(ctx, "failed to update origin rules", "origin_id", oid, "error", err)
+		return err
+	}
+	return nil
 }
 
 func (s *BlobService) RetrieveScanOrigin(ctx context.Context, oid uint) (*repository.ScanOrigin, error) {

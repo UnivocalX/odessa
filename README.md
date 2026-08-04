@@ -23,8 +23,12 @@ Protected endpoints require `Authorization: Bearer <access-token>`:
 
 - `GET /api/v1/origins`
 - `POST /api/v1/origins`
+- `PUT /api/v1/origins/{id}/rules`
 - `POST /api/v1/origins/{id}/scan`
 - `GET /api/v1/origins/{id}/scan`
+- `GET /api/v1/labels`
+- `POST /api/v1/labels`
+- `POST /api/v1/blobs/search`
 - `POST /api/logout`
 - `POST /api/password/change`
 - `POST /api/account/disable`
@@ -49,6 +53,78 @@ Example:
 curl -H "Authorization: Bearer $ACCESS_TOKEN" \
   "http://localhost:8080/api/v1/blobs?limit=50"
 ```
+
+### Search blobs
+
+`POST /api/v1/blobs/search` queries blobs with filtering and cursor-based pagination. All filters are optional and combined with AND logic.
+
+Request body:
+
+```json
+{
+  "hashes": ["abc123..."],
+  "mime_types": ["image/png", "application/json"],
+  "labels": ["source", "type"],
+  "label_values": { "source": "photos", "type": "image" },
+  "uri_pattern": "s3://bucket/%",
+  "min_size": 1024,
+  "max_size": 10485760,
+  "cursor": 0,
+  "limit": 50
+}
+```
+
+Response:
+
+```json
+{
+  "blobs": [
+    { "id": 1, "hash": "abc...", "mime_type": "image/png", "size": 4096, "labels": [{"name": "source", "value": "photos"}] }
+  ],
+  "next_cursor": 1,
+  "has_more": false
+}
+```
+
+### Labels
+
+Labels are key-value metadata attached to blobs. Create a label, then assign it to blobs manually or via label rules.
+
+```sh
+# Create a label
+curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "source", "description": "Data source identifier"}' \
+  "http://localhost:8080/api/v1/labels"
+
+# List labels
+curl -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "http://localhost:8080/api/v1/labels"
+```
+
+### Label rules
+
+Label rules are glob patterns that automatically assign labels to files during scans. Rules can be set on an origin (default for all scans) and optionally overridden per scan.
+
+```sh
+# Set default rules on an origin
+curl -X PUT -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rules": {"*": [{"label": "source", "value": "photos"}], "*.jpg": [{"label": "type", "value": "image"}]}}' \
+  "http://localhost:8080/api/v1/origins/1/rules"
+
+# Trigger a scan (uses origin rules by default)
+curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "http://localhost:8080/api/v1/origins/1/scan"
+
+# Trigger a scan with rule overrides (same pattern key replaces origin's)
+curl -X POST -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rules": {"*.png": [{"label": "type", "value": "png-image"}]}}' \
+  "http://localhost:8080/api/v1/origins/1/scan"
+```
+
+Rule merging: origin rules are the base; scan rules override on a per-pattern basis. Pattern `"*"` matches all files.
 
 ## Configuration
 

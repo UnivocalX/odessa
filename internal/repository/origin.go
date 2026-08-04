@@ -15,12 +15,18 @@ import (
 type Origin struct {
 	gorm.Model
 
-	URI storage.URI `gorm:"not null;uniqueIndex" validate:"required,storage_uri"`
+	URI   storage.URI     `gorm:"not null;uniqueIndex" validate:"required,storage_uri"`
+	Rules json.RawMessage `gorm:"type:jsonb;not null;default:'{}'" validate:"json"`
 }
 
-func (r *Repository) CreateOrigin(ctx context.Context, uri string) (*Origin, error) {
+func (r *Repository) CreateOrigin(ctx context.Context, uri string, rules json.RawMessage) (*Origin, error) {
+	if rules == nil {
+		rules = json.RawMessage(`{}`)
+	}
+
 	origin := &Origin{
-		URI: storage.URI(uri),
+		URI:   storage.URI(uri),
+		Rules: rules,
 	}
 
 	if err := validate.Struct(origin); err != nil {
@@ -33,6 +39,17 @@ func (r *Repository) CreateOrigin(ctx context.Context, uri string) (*Origin, err
 	}
 
 	return origin, err
+}
+
+// UpdateOriginRules replaces the label rules on an existing origin.
+func (r *Repository) UpdateOriginRules(ctx context.Context, id uint, rules json.RawMessage) error {
+	if rules == nil {
+		rules = json.RawMessage(`{}`)
+	}
+	return r.DB.WithContext(ctx).
+		Model(&Origin{}).
+		Where("id = ?", id).
+		Update("rules", rules).Error
 }
 
 func (r *Repository) ListOrigins(ctx context.Context) ([]Origin, error) {

@@ -17,7 +17,7 @@ func HandlePostOrigin(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
-		_, err := svc.RegisterOrigin(r.Context(), req.URI)
+		_, err := svc.RegisterOrigin(r.Context(), req.URI, req.Rules)
 		if err != nil {
 			utils.HandleError(w, r, err)
 			return

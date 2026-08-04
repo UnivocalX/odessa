@@ -59,6 +59,7 @@ func Register(mux *http.ServeMux, authSvc *service.AuthService, blobSvc *service
 	// data management
 	mux.Handle(V1Route(http.MethodGet, "origins"), v1handlers.HandleListOrigins(blobSvc))
 	mux.Handle(V1Route(http.MethodPost, "origins"), v1handlers.HandlePostOrigin(blobSvc))
+	mux.Handle(V1Route(http.MethodPut, "origins/{id}/rules"), v1handlers.HandlePutOriginRules(blobSvc))
 	mux.Handle(V1Route(http.MethodPost, "origins/{id}/scan"), v1handlers.HandlePostOriginScan(blobSvc))
 	mux.Handle(V1Route(http.MethodGet, "origins/{id}/scan"), v1handlers.HandleGetScanOrigin(blobSvc))
 

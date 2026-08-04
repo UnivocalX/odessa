@@ -1,0 +1,1 @@
+ALTER TABLE origins DROP COLUMN IF EXISTS rules;

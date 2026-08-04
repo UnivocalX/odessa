@@ -5,7 +5,8 @@ import (
 )
 
 type PostOriginRequest struct {
-	URI string `json:"uri" validate:"required,url"`
+	URI   string                 `json:"uri" validate:"required,url"`
+	Rules *repository.LabelRules `json:"rules,omitempty"`
 }
 
 type PostBlobRequest struct {
@@ -19,6 +20,10 @@ type PostLabelRequest struct {
 
 type PostScanOriginRequest struct {
 	Rules *repository.LabelRules `json:"rules,omitempty"`
+}
+
+type PutOriginRulesRequest struct {
+	Rules repository.LabelRules `json:"rules" validate:"required"`
 }
 
 type CreateUserRequest struct {
