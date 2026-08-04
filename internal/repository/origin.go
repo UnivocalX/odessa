@@ -82,13 +82,14 @@ const (
 	StatusInProgress Status = "in_progress"
 	StatusCompleted  Status = "completed"
 	StatusFailed     Status = "failed"
+	StatusCancelled  Status = "cancelled"
 )
 
 type ScanOrigin struct {
 	gorm.Model
 
-	OriginID uint            `gorm:"not null;uniqueIndex"`
-	Status   Status          `gorm:"type:text;not null;default:'pending'" validate:"required,oneof=pending in_progress completed failed"`
+	OriginID uint            `gorm:"not null;index"` // was: uniqueIndex
+	Status   Status          `gorm:"type:text;not null;default:'pending'" validate:"required,oneof=pending in_progress completed failed cancelled"`
 	Attempts int             `gorm:"not null;default:0"`
 	Rules    json.RawMessage `gorm:"column:rules;type:jsonb;not null;default:'{}'" validate:"json"`
 	Results  json.RawMessage `gorm:"type:jsonb;not null;default:'{}'" validate:"required,json"`
@@ -110,33 +111,31 @@ type LabelAssignment struct {
 	Value string `json:"value"`
 }
 
-func (r *Repository) CreateScanOrigin(ctx context.Context, oid uint, rules json.RawMessage) (*ScanOrigin, error) {
-	if rules == nil {
-		rules = json.RawMessage(`{}`)
-	}
-
+func (r *Repository) CreateScanOrigin(ctx context.Context, originID uint, rules json.RawMessage) (*ScanOrigin, error) {
 	scan := &ScanOrigin{
+		OriginID: originID,
 		Status:   StatusPending,
-		OriginID: oid,
 		Rules:    rules,
 		Results:  json.RawMessage(`{}`),
 	}
 
-	if err := validate.Struct(scan); err != nil {
-		return nil, fmt.Errorf("repository: validate scan origin: %w", err)
-	}
-
 	if err := r.DB.WithContext(ctx).Create(scan).Error; err != nil {
-		return nil, fmt.Errorf("repository: create scan origin: %w", err)
+		if isUniqueViolation(err, "idx_scan_origins_active_origin") {
+			return nil, fmt.Errorf("%w: origin %d", ErrScanAlreadyRunning, originID)
+		}
+		return nil, err
 	}
 
 	return scan, nil
 }
 
-func (r *Repository) GetScanOrigin(ctx context.Context, id uint) (*ScanOrigin, error) {
+func (r *Repository) GetScanOrigin(ctx context.Context, originID uint) (*ScanOrigin, error) {
 	var scan ScanOrigin
-	if err := r.DB.WithContext(ctx).First(&scan, id).Error; err != nil {
-		return nil, fmt.Errorf("repository: get scan origin %d: %w", id, err)
+	err := r.DB.WithContext(ctx).
+		Where("origin_id = ?", originID).
+		Last(&scan).Error
+	if err != nil {
+		return nil, fmt.Errorf("repository: get scan origin %d: %w", originID, err)
 	}
 	return &scan, nil
 }
@@ -236,4 +235,12 @@ func (r *Repository) CompleteScanOrigin(ctx context.Context, id uint, results an
 		return fmt.Errorf("repository: complete scan origin %d: %w", id, err)
 	}
 	return nil
+}
+
+// UpdateScanOriginStatus updates the status field for a scan origin record.
+func (r *Repository) UpdateScanOriginStatus(ctx context.Context, id uint, status Status) error {
+	return r.DB.WithContext(ctx).
+		Model(&ScanOrigin{}).
+		Where("id = ?", id).
+		Update("status", status).Error
 }

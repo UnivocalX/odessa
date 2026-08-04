@@ -108,12 +108,38 @@ func (s *BlobService) NewScanOrigin(ctx context.Context, oid uint, rules *reposi
 		}
 	}
 
-	task, err := s.repo.CreateScanOrigin(ctx, oid, rulesJSON)
-
+	scan, err := s.repo.CreateScanOrigin(ctx, oid, rulesJSON)
 	if err != nil {
+		if errors.Is(err, repository.ErrScanAlreadyRunning) {
+			return nil, fmt.Errorf("%w: an active origin scan exist %d", ErrAlreadyExists, oid)
+		}
 		slog.ErrorContext(ctx, "failed to create scan origin", "origin_id", oid, "error", err)
 		return nil, err
 	}
 
-	return task, nil
+	return scan, nil
+}
+
+// CancelScanOrigin marks an in-progress or pending scan as cancelled.
+func (s *BlobService) CancelScanOrigin(ctx context.Context, id uint) error {
+	scan, err := s.repo.GetScanOrigin(ctx, id)
+	if err != nil {
+		return fmt.Errorf("%w: scan %d", ErrNotFound, id)
+	}
+
+	if scan.Status == repository.StatusCompleted || scan.Status == repository.StatusFailed || scan.Status == repository.StatusCancelled {
+		return fmt.Errorf("%w: scan %d", ErrCannotCancel, id)
+	}
+
+	if err := s.repo.UpdateScanOriginStatus(ctx, id, repository.StatusCancelled); err != nil {
+		slog.ErrorContext(ctx, "failed to cancel scan origin", "scan_id", id, "error", err)
+		return err
+	}
+
+	// Emit a notification so workers listening via LISTEN can react immediately.
+	if err := s.repo.NotifyScanCancelled(ctx, id); err != nil {
+		slog.WarnContext(ctx, "notify scan cancelled failed", "scan_id", id, "error", err)
+	}
+
+	return nil
 }

@@ -23,4 +23,7 @@ var (
 
 	// ErrInvalidCredentials is returned when login credentials are invalid.
 	ErrInvalidCredentials = errors.New("invalid credentials")
+
+	// ErrCannotCancel is returned when a scan cannot be cancelled (already finished).
+	ErrCannotCancel = errors.New("cannot cancel scan")
 )

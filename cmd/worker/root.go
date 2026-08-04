@@ -40,6 +40,7 @@ func run(cmd *cobra.Command, args []string) error {
 		slog.Error("open database", "error", err)
 		return err
 	}
+	defer repo.Close()
 
 	if err := config.ConfigureStorage(cfg.Storage); err != nil {
 		return fmt.Errorf("configure storage: %w", err)

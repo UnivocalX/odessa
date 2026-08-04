@@ -281,3 +281,5 @@ go build -o bin/odessa-server ./cmd/server
 go build -o bin/odessa-worker ./cmd/worker
 ./bin/odessa-worker --config config.yaml
 ```
+
+1. patch scan after cancaltion cant create a new scan

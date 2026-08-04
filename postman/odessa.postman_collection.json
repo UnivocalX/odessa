@@ -207,6 +207,21 @@
           }
         },
         {
+          "name": "Cancel origin scan",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [ "const body = pm.response.json();", "if (body.id) pm.environment.set('task_id', body.id);" ] }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{access_token}}" } ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": { "raw": "{{base_url}}/api/v1/origins/{{origin_id}}/scan/cancel", "host": [ "{{base_url}}" ], "path": [ "api", "v1", "origins", "{{origin_id}}", "scan", "cancel" ] }
+          }
+        },
+        {
           "name": "Get origin scan task",
           "request": {
             "method": "GET",

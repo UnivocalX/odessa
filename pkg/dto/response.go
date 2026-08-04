@@ -1,6 +1,9 @@
 package dto
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Response struct {
 	Message string `json:"message,omitempty"`
@@ -19,9 +22,10 @@ type ErrorResponse struct {
 }
 
 type OriginResponse struct {
-	ID        uint   `json:"id"`
-	URI       string `json:"uri"`
-	CreatedAt string `json:"created_at"`
+	ID        uint            `json:"id"`
+	URI       string          `json:"uri"`
+	CreatedAt string          `json:"created_at"`
+	Rules     json.RawMessage `json:"rules,omitempty"`
 }
 
 type ListOriginsResponse struct {
@@ -58,10 +62,10 @@ type ListLabelsResponse struct {
 }
 
 type BlobResponse struct {
-	ID       uint               `json:"id"`
-	Hash     string             `json:"hash"`
-	MimeType string             `json:"mime_type"`
-	Size     int64              `json:"size"`
+	ID       uint                `json:"id"`
+	Hash     string              `json:"hash"`
+	MimeType string              `json:"mime_type"`
+	Size     int64               `json:"size"`
 	Labels   []BlobLabelResponse `json:"labels,omitempty"`
 }
 

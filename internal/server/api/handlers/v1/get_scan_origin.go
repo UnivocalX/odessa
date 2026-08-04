@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -22,8 +23,9 @@ func HandleGetScanOrigin(svc *service.BlobService) http.HandlerFunc {
 		if err != nil {
 			utils.HandleError(w, r, fmt.Errorf("%w: invalid task id", service.ErrValidation))
 			return
-
 		}
+
+		slog.InfoContext(r.Context(), "retrieve origin scan", "scan_id", rawID)
 
 		scan, err := svc.RetrieveScanOrigin(r.Context(), uint(oid))
 		if err != nil {
@@ -31,6 +33,7 @@ func HandleGetScanOrigin(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
+		slog.InfoContext(r.Context(), "retrieve origin scan success", "scan_id", scan.ID, "status", string(scan.Status))
 		utils.RespondOK(w, r, dto.ScanOriginResponse{
 			ID:        scan.ID,
 			Status:    string(scan.Status),

@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"github.com/UnivocalX/odessa/internal/repository"
 	"github.com/UnivocalX/odessa/internal/storage"
@@ -100,24 +101,64 @@ func (h *ScanOriginHandler) Handle(ctx context.Context, job Job) (any, error) {
 		return nil, fmt.Errorf("unexpected payload type: %T", job.Payload)
 	}
 
-	origin, err := h.repo.GetOrigin(ctx, scan.OriginID)
+	// Create a cancellable processing context and start a watcher that polls
+	// the scan record; if a cancel request is observed, cancel processing.
+	procCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Prefer event-based notifications: subscribe to NOTIFY/LISTEN for
+	// scan cancellations. Fall back to the polling watcher if subscribe fails.
+	ch, stop, err := h.repo.SubscribeScanCancels(procCtx)
+	if err != nil {
+		doneCh := h.startCancelWatcher(scan.ID, cancel)
+		defer close(doneCh)
+	} else {
+		defer stop()
+		// react to notifications for our scan id
+		go func() {
+			for id := range ch {
+				if id == scan.ID {
+					slog.Info("scan cancelled via NOTIFY", "scan_id", scan.ID)
+					cancel()
+					return
+				}
+			}
+		}()
+	}
+
+	origin, err := h.repo.GetOrigin(procCtx, scan.OriginID)
 	if err != nil {
 		return nil, fmt.Errorf("get origin %d: %w", scan.OriginID, err)
 	}
 
 	// Run the scan pipeline: list, hash, and detect MIME types.
-	files, scanErr := ScanOriginPipeline(ctx, h.reg, string(origin.URI))
+	files, scanErr := ScanOriginPipeline(procCtx, h.reg, string(origin.URI))
 	results := &ScanResults{}
 	collectScanErrors(results, scanErr)
 
+	if procCtx.Err() != nil {
+		log.Info("aborting scan after cancellation", "scan_id", scan.ID)
+		return nil, nil
+	}
+
 	// Upsert blobs and their storage locations.
-	if err := h.persistBlobs(ctx, files, results); err != nil {
+	if err := h.persistBlobs(procCtx, files, results); err != nil {
 		return nil, err
 	}
 
+	if procCtx.Err() != nil {
+		log.Info("aborting scan after cancellation (persist)", "scan_id", scan.ID)
+		return nil, nil
+	}
+
 	// Apply label rules (pattern → label assignments).
-	if err := h.applyRules(ctx, origin, scan, files, results); err != nil {
+	if err := h.applyRules(procCtx, origin, scan, files, results); err != nil {
 		return nil, err
+	}
+
+	if procCtx.Err() != nil {
+		log.Info("aborting scan after cancellation (apply rules)", "scan_id", scan.ID)
+		return nil, nil
 	}
 
 	if results.Created == 0 {
@@ -126,6 +167,45 @@ func (h *ScanOriginHandler) Handle(ctx context.Context, job Job) (any, error) {
 
 	log.Info("scan complete", "created", results.Created, "failed", results.Failed)
 	return results, nil
+}
+
+// startCancelWatcher begins a background goroutine that checks the database
+// for a cancelled scan record. It returns a channel which can be closed to
+// stop the watcher. When the scan is found cancelled the provided cancel
+// function is invoked.
+func (h *ScanOriginHandler) startCancelWatcher(scanID uint, cancel context.CancelFunc) chan struct{} {
+	doneCh := make(chan struct{})
+
+	// Immediate check to avoid waiting for the first tick.
+	if s, err := h.repo.GetScanOrigin(context.Background(), scanID); err == nil {
+		if s.Status == repository.StatusCancelled {
+			slog.Info("scan cancelled before processing (watcher immediate)", "scan_id", scanID)
+			cancel()
+			return doneCh
+		}
+	}
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-doneCh:
+				return
+			case <-ticker.C:
+				s, err := h.repo.GetScanOrigin(context.Background(), scanID)
+				if err != nil {
+					continue
+				}
+				if s.Status == repository.StatusCancelled {
+					slog.Info("scan cancelled during processing", "scan_id", scanID)
+					cancel()
+					return
+				}
+			}
+		}
+	}()
+	return doneCh
 }
 
 // collectScanErrors extracts per-file errors from the pipeline's MultiError

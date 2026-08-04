@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/UnivocalX/odessa/internal/server/api/utils"
@@ -17,12 +18,15 @@ func HandlePostOrigin(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
+		slog.InfoContext(r.Context(), "register origin", "uri", req.URI)
+
 		_, err := svc.RegisterOrigin(r.Context(), req.URI, req.Rules)
 		if err != nil {
 			utils.HandleError(w, r, err)
 			return
 		}
 
+		slog.InfoContext(r.Context(), "register origin success", "uri", req.URI)
 		utils.RespondOK(w, r, dto.Response{Message: "successful registered origin"})
 	}
 }

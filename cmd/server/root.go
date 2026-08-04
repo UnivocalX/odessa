@@ -51,6 +51,7 @@ func run(cmd *cobra.Command, args []string) error {
 		slog.Error("open database", "error", err)
 		return err
 	}
+	defer repo.Close()
 
 	blobSvc := service.NewBlobService(repo, storage.Default())
 	authSvc := service.NewAuthService(repo, service.AuthOptions{

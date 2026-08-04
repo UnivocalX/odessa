@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/UnivocalX/odessa/internal/server/api/utils"
@@ -17,12 +18,15 @@ func HandlePostLabel(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
+		slog.InfoContext(r.Context(), "create label", "name", req.Name)
+
 		l, err := svc.NewLabel(r.Context(), req.Name, req.Description)
 		if err != nil {
 			utils.HandleError(w, r, err)
 			return
 		}
 
+		slog.InfoContext(r.Context(), "create label success", "id", l.ID, "name", l.Name)
 		utils.RespondOK(w, r, dto.LabelResponse{ID: l.ID, Name: l.Name, Description: l.Description})
 	}
 }

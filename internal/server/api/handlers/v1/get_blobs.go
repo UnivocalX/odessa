@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -33,6 +34,8 @@ func HandleListBlobs(svc *service.BlobService) http.HandlerFunc {
 			opts = append(opts, repository.WithLimit(limit))
 		}
 
+		slog.InfoContext(r.Context(), "list blobs", "cursor", query.Get("cursor"), "limit", query.Get("limit"))
+
 		result, err := svc.SearchBlobs(r.Context(), opts...)
 		if err != nil {
 			utils.HandleError(w, r, err)
@@ -60,6 +63,7 @@ func HandleListBlobs(svc *service.BlobService) http.HandlerFunc {
 			resp.Blobs[i] = blob
 		}
 
+		slog.InfoContext(r.Context(), "list blobs success", "count", len(resp.Blobs), "next_cursor", resp.NextCursor, "has_more", resp.HasMore)
 		utils.RespondOK(w, r, resp)
 	}
 }
@@ -72,6 +76,8 @@ func HandleGetBlob(svc *service.BlobService) http.HandlerFunc {
 			utils.HandleError(w, r, fmt.Errorf("%w: missing blob hash", service.ErrValidation))
 			return
 		}
+
+		slog.InfoContext(r.Context(), "get blob", "hash", hash)
 
 		b, err := svc.RetrieveBlobByHash(r.Context(), hash)
 		if err != nil {
@@ -92,6 +98,7 @@ func HandleGetBlob(svc *service.BlobService) http.HandlerFunc {
 			})
 		}
 
+		slog.InfoContext(r.Context(), "get blob success", "hash", resp.Hash, "id", resp.ID)
 		utils.RespondOK(w, r, resp)
 	}
 }

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/UnivocalX/odessa/internal/server/api/utils"
@@ -15,10 +16,15 @@ func HandlePasswordResetRequest(svc *service.AuthService) http.HandlerFunc {
 			utils.HandleError(w, r, err)
 			return
 		}
+
+		slog.InfoContext(r.Context(), "password reset requested", "email", req.Email)
+
 		if err := svc.RequestPasswordReset(r.Context(), req.Email); err != nil {
 			utils.HandleError(w, r, err)
 			return
 		}
+
+		slog.InfoContext(r.Context(), "password reset request accepted", "email", req.Email)
 		utils.RespondOK(w, r, dto.Response{Message: "if the account exists, reset instructions will be sent"})
 	}
 }
@@ -30,10 +36,15 @@ func HandlePasswordResetConfirm(svc *service.AuthService) http.HandlerFunc {
 			utils.HandleError(w, r, err)
 			return
 		}
+
+		slog.InfoContext(r.Context(), "password reset confirm attempt")
+
 		if err := svc.ResetPassword(r.Context(), req.Token, req.Password); err != nil {
 			utils.HandleError(w, r, err)
 			return
 		}
+
+		slog.InfoContext(r.Context(), "password reset confirm success")
 		utils.RespondOK(w, r, dto.Response{Message: "password reset"})
 	}
 }

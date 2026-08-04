@@ -60,15 +60,21 @@ func RespondConflict(w http.ResponseWriter, r *http.Request, e error) {
 }
 
 func HandleError(w http.ResponseWriter, r *http.Request, err error) {
+	slog.ErrorContext(r.Context(), "error", err)
+
 	switch {
 	case errors.Is(err, service.ErrNotFound):
 		Respond(w, r, http.StatusNotFound, dto.ErrorResponse{
 			Response: dto.Response{Message: "not found"},
 			Error:    err.Error(),
 		})
+	case errors.Is(err, service.ErrUnsupportedBackend):
+		RespondBadRequest(w, r, err)
 	case errors.Is(err, service.ErrValidation):
 		RespondBadRequest(w, r, err)
 	case errors.Is(err, service.ErrAlreadyExists):
+		RespondConflict(w, r, err)
+	case errors.Is(err, service.ErrCannotCancel):
 		RespondConflict(w, r, err)
 	case errors.Is(err, service.ErrInvalidCredentials):
 		Respond(w, r, http.StatusUnauthorized, dto.ErrorResponse{

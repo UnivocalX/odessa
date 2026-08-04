@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -15,6 +16,7 @@ func HandlePutOriginRules(svc *service.BlobService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rawID := r.PathValue("id")
 		if rawID == "" {
+			slog.WarnContext(r.Context(), "missing origin id in path")
 			utils.HandleError(w, r, fmt.Errorf("%w: missing origin id", service.ErrValidation))
 			return
 		}
@@ -31,11 +33,14 @@ func HandlePutOriginRules(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
+		slog.InfoContext(r.Context(), "update origin rules", "origin_id", rawID, "patterns", len(req.Rules))
+
 		if err := svc.UpdateOriginRules(r.Context(), uint(oid), &req.Rules); err != nil {
 			utils.HandleError(w, r, err)
 			return
 		}
 
+		slog.InfoContext(r.Context(), "update origin rules success", "origin_id", rawID)
 		utils.RespondOK(w, r, dto.Response{Message: "rules updated"})
 	}
 }
