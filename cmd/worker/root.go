@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/UnivocalX/odessa/internal/config"
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/UnivocalX/odessa/internal/repository"
 	"github.com/UnivocalX/odessa/internal/storage"
 	"github.com/UnivocalX/odessa/internal/tasks"
@@ -42,7 +42,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	defer repo.Close()
 
-	if err := config.ConfigureStorage(cfg.Storage); err != nil {
+	if err := core.ConfigureStorage(cfg.Storage); err != nil {
 		return fmt.Errorf("configure storage: %w", err)
 	}
 
@@ -89,5 +89,5 @@ func init() {
 	rootCmd.Flags().Int("max-attempts", 3, "maximum retry attempts before marking a scan as failed")
 	rootCmd.Flags().Duration("drain-timeout", 30*time.Second, "max time to wait for in-flight tasks on shutdown")
 
-	config.RegisterStorageFlags(rootCmd)
+	core.RegisterStorageFlags(rootCmd)
 }

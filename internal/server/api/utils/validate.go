@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/UnivocalX/odessa/internal/service"
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -19,19 +19,19 @@ func Decode[T any](r *http.Request, v T) error {
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(v); err != nil {
-		return fmt.Errorf("%w: decode request: %w", service.ErrValidation, err)
+		return fmt.Errorf("%w: decode request: %w", core.ErrValidation, err)
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		if err == nil {
-			return fmt.Errorf("%w: request must contain one JSON value", service.ErrValidation)
+			return fmt.Errorf("%w: request must contain one JSON value", core.ErrValidation)
 		}
-		return fmt.Errorf("%w: trailing request data: %w", service.ErrValidation, err)
+		return fmt.Errorf("%w: trailing request data: %w", core.ErrValidation, err)
 	}
 
 	if err := validate.Struct(v); err != nil {
 		var validationErrs validator.ValidationErrors
 		if errors.As(err, &validationErrs) {
-			return fmt.Errorf("%w: %w", service.ErrValidation, err)
+			return fmt.Errorf("%w: %w", core.ErrValidation, err)
 		}
 		return err
 	}

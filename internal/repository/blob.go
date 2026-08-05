@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/UnivocalX/odessa/internal/storage"
+	"github.com/UnivocalX/odessa/internal/core"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -22,8 +22,8 @@ type Blob struct {
 type Location struct {
 	gorm.Model
 
-	BlobID uint        `gorm:"not null;index" validate:"required"`
-	URI    storage.URI `gorm:"not null;uniqueIndex:idx_locations_uri" validate:"required,storage_uri"`
+	BlobID uint     `gorm:"not null;index" validate:"required"`
+	URI    core.URI `gorm:"not null;uniqueIndex:idx_locations_uri" validate:"required,url"`
 }
 
 // BlobBatchCreateInput represents a discovered file to be persisted.
@@ -67,7 +67,7 @@ func (r *Repository) BatchCreateBlobs(ctx context.Context, inputs []BlobBatchCre
 
 			loc := Location{
 				BlobID: blob.ID,
-				URI:    storage.URI(in.URI),
+				URI:    core.URI(in.URI),
 			}
 			if err := tx.Clauses(clause.OnConflict{
 				Columns:   []clause.Column{{Name: "uri"}},

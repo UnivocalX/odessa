@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"gorm.io/gorm"
 )
 
 type Label struct {
 	gorm.Model
 
-	Name string `gorm:"type:varchar(64);not null;uniqueIndex" validate:"required,min=2,max=64"`
+	Name        string `gorm:"type:varchar(64);not null;uniqueIndex" validate:"required,min=2,max=64"`
 	Description string `gorm:"type:varchar(255);not null;default:''" validate:"max=255"`
 }
 
@@ -42,7 +43,7 @@ func (r *Repository) CreateLabel(ctx context.Context, name string, description s
 
 	err := gorm.G[Label](r.DB).Create(ctx, label)
 	if err != nil && isDuplicateKeyError(err) {
-		return nil, ErrAlreadyExists
+		return nil, core.ErrAlreadyExists
 	}
 
 	return label, err

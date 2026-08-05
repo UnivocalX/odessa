@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/UnivocalX/odessa/internal/repository"
 )
 
@@ -27,14 +28,14 @@ type PutOriginRulesRequest struct {
 }
 
 type CreateUserRequest struct {
-	Name     string            `json:"name" validate:"required,min=2,max=100"`
-	Email    string            `json:"email" validate:"required,email"`
-	Password repository.Secret `json:"password" validate:"required,min=8,max=72"`
+	Name     string      `json:"name" validate:"required,min=2,max=100"`
+	Email    string      `json:"email" validate:"required,email"`
+	Password core.Secret `json:"password" validate:"required,min=8,max=72"`
 }
 
 type LoginRequest struct {
-	Email    string            `json:"email" validate:"required,email"`
-	Password repository.Secret `json:"password" validate:"required,min=8,max=72"`
+	Email    string      `json:"email" validate:"required,email"`
+	Password core.Secret `json:"password" validate:"required,min=8,max=72"`
 }
 
 type RefreshRequest struct {
@@ -42,12 +43,12 @@ type RefreshRequest struct {
 }
 
 type ChangePasswordRequest struct {
-	CurrentPassword repository.Secret `json:"current_password" validate:"required,min=8,max=72"`
-	NewPassword     repository.Secret `json:"new_password" validate:"required,min=8,max=72"`
+	CurrentPassword core.Secret `json:"current_password" validate:"required,min=8,max=72"`
+	NewPassword     core.Secret `json:"new_password" validate:"required,min=8,max=72"`
 }
 
 type DisableAccountRequest struct {
-	Password repository.Secret `json:"password" validate:"required,min=8,max=72"`
+	Password core.Secret `json:"password" validate:"required,min=8,max=72"`
 }
 
 type PasswordResetRequest struct {
@@ -55,8 +56,8 @@ type PasswordResetRequest struct {
 }
 
 type PasswordResetConfirmRequest struct {
-	Token    string            `json:"token" validate:"required"`
-	Password repository.Secret `json:"password" validate:"required,min=8,max=72"`
+	Token    string      `json:"token" validate:"required"`
+	Password core.Secret `json:"password" validate:"required,min=8,max=72"`
 }
 
 type BlobFilter struct {
@@ -84,5 +85,6 @@ type PostDatasetRequest struct {
 }
 
 type PostDatasetVersionRequest struct {
-	Commit string `json:"description" validate:"max=255"`
+	Commit  string `json:"commit" validate:"max=255"`
+	BlobIDs []uint `json:"blob_ids" validate:"required,min=1,dive,min=1"`
 }

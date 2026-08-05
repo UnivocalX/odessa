@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/UnivocalX/odessa/internal/repository"
 )
 
@@ -31,7 +32,7 @@ func (s *BlobService) ListLabels(ctx context.Context) ([]repository.Label, error
 func (s *BlobService) RetrieveLabel(ctx context.Context, id uint) (*repository.Label, error) {
 	label, err := s.repo.GetLabel(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("%w: label %d", ErrNotFound, id)
+		return nil, fmt.Errorf("%w: label %d", core.ErrNotFound, id)
 	}
 	return label, nil
 }

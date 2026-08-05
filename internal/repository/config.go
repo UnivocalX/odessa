@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -17,7 +18,7 @@ type Config struct {
 	// DSN is the PostgreSQL connection string.
 	// Example: "postgres://user:pass@localhost/odessa?sslmode=disable"
 	//          "host=localhost port=5432 dbname=odessa user=pg password=secret sslmode=disable"
-	DSN Secret
+	DSN core.Secret
 }
 
 // Open opens a GORM PostgreSQL database using cfg.

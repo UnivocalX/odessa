@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -53,10 +54,22 @@ func (r *Repository) CreateDataset(ctx context.Context, name string, description
 
 	err := gorm.G[Dataset](r.DB).Create(ctx, dataset)
 	if err != nil && isDuplicateKeyError(err) {
-		return nil, ErrAlreadyExists
+		return nil, core.ErrAlreadyExists
 	}
 
 	return dataset, err
+}
+
+func (r *Repository) ListDatasets(ctx context.Context) ([]Dataset, error) {
+	var datasets []Dataset
+
+	if err := r.DB.WithContext(ctx).
+		Order("created_at DESC").
+		Find(&datasets).Error; err != nil {
+		return nil, err
+	}
+
+	return datasets, nil
 }
 
 func (r *Repository) CreateDatasetVersion(ctx context.Context, id uint, commit string) (*DatasetVersion, error) {
@@ -69,7 +82,49 @@ func (r *Repository) CreateDatasetVersion(ctx context.Context, id uint, commit s
 		return nil, err
 	}
 
-	return version, nil
+	err := gorm.G[DatasetVersion](r.DB).Create(ctx, version)
+	if isForeignKeyViolation(err, "dataset_versions_dataset_id_fkey") {
+		return nil, core.ErrNotFound
+	}
+
+	return version, err
+}
+
+func (r *Repository) ListDatasetVersions(ctx context.Context, datasetID uint) ([]DatasetVersion, error) {
+	var dataset Dataset
+	if err := r.DB.WithContext(ctx).Select("id").First(&dataset, datasetID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, core.ErrNotFound
+		}
+		return nil, err
+	}
+
+	var versions []DatasetVersion
+	if err := r.DB.WithContext(ctx).
+		Where("dataset_id = ?", datasetID).
+		Order("created_at DESC").
+		Find(&versions).Error; err != nil {
+		return nil, err
+	}
+
+	return versions, nil
+}
+
+func (r *Repository) GetDatasetVersion(ctx context.Context, datasetID uint, versionID uint) (*DatasetVersion, error) {
+	var version DatasetVersion
+	if err := r.DB.WithContext(ctx).
+		Preload("Blobs", func(tx *gorm.DB) *gorm.DB {
+			return tx.Order("blobs.id ASC")
+		}).
+		Where("id = ? AND dataset_id = ?", versionID, datasetID).
+		First(&version).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, core.ErrNotFound
+		}
+		return nil, err
+	}
+
+	return &version, nil
 }
 
 // BatchAssociateBlobsToDatasetVersion links many blobs to a dataset version.
@@ -128,7 +183,7 @@ func ensureDatasetVersionExists(tx *gorm.DB, datasetVersionID uint) error {
 	var version DatasetVersion
 	if err := tx.Select("id").First(&version, datasetVersionID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrNotFound
+			return core.ErrNotFound
 		}
 		return err
 	}

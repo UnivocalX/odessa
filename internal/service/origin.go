@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/UnivocalX/odessa/internal/repository"
-	"github.com/go-playground/validator/v10"
 )
 
 func (s *BlobService) ListOrigins(ctx context.Context) ([]repository.Origin, error) {
@@ -41,19 +41,17 @@ func (s *BlobService) RegisterOrigin(ctx context.Context, uri string, rules *rep
 	if rules != nil {
 		rulesJSON, err = json.Marshal(rules)
 		if err != nil {
-			return nil, fmt.Errorf("%w: invalid rules", ErrValidation)
+			return nil, fmt.Errorf("%w: invalid rules", core.ErrValidation)
 		}
 	}
 
 	origin, err := s.repo.CreateOrigin(ctx, uri, rulesJSON)
 	if err != nil {
-		if errors.Is(err, repository.ErrAlreadyExists) {
-			return nil, fmt.Errorf("%w: %s", ErrAlreadyExists, uri)
+		if errors.Is(err, core.ErrAlreadyExists) {
+			return nil, fmt.Errorf("%w: %s", core.ErrAlreadyExists, uri)
 		}
-
-		var validationErrs validator.ValidationErrors
-		if errors.As(err, &validationErrs) {
-			return nil, fmt.Errorf("%w: %w", ErrValidation, err)
+		if validationErr := mapValidationError(err); validationErr != nil {
+			return nil, validationErr
 		}
 
 		slog.ErrorContext(ctx, "failed to persist origin", "uri", uri, "error", err)
@@ -67,14 +65,14 @@ func (s *BlobService) RegisterOrigin(ctx context.Context, uri string, rules *rep
 func (s *BlobService) UpdateOriginRules(ctx context.Context, oid uint, rules *repository.LabelRules) error {
 	_, err := s.repo.GetOrigin(ctx, oid)
 	if err != nil {
-		return fmt.Errorf("%w: origin %d", ErrNotFound, oid)
+		return fmt.Errorf("%w: origin %d", core.ErrNotFound, oid)
 	}
 
 	var rulesJSON json.RawMessage
 	if rules != nil {
 		rulesJSON, err = json.Marshal(rules)
 		if err != nil {
-			return fmt.Errorf("%w: invalid rules", ErrValidation)
+			return fmt.Errorf("%w: invalid rules", core.ErrValidation)
 		}
 	}
 
@@ -88,30 +86,28 @@ func (s *BlobService) UpdateOriginRules(ctx context.Context, oid uint, rules *re
 func (s *BlobService) RetrieveScanOrigin(ctx context.Context, oid uint) (*repository.ScanOrigin, error) {
 	scan, err := s.repo.GetScanOrigin(ctx, oid)
 	if err != nil {
-		return nil, fmt.Errorf("%w: scan origin %d", ErrNotFound, oid)
+		return nil, fmt.Errorf("%w: scan origin %d", core.ErrNotFound, oid)
 	}
 	return scan, nil
 }
 
 func (s *BlobService) NewScanOrigin(ctx context.Context, oid uint, rules *repository.LabelRules) (*repository.ScanOrigin, error) {
-	// Verify the origin exists.
-	_, err := s.repo.GetOrigin(ctx, oid)
-	if err != nil {
-		return nil, fmt.Errorf("%w: origin %d", ErrNotFound, oid)
-	}
-
 	var rulesJSON json.RawMessage
+	var err error
 	if rules != nil {
 		rulesJSON, err = json.Marshal(rules)
 		if err != nil {
-			return nil, fmt.Errorf("%w: invalid rules", ErrValidation)
+			return nil, fmt.Errorf("%w: invalid rules", core.ErrValidation)
 		}
 	}
 
 	scan, err := s.repo.CreateScanOrigin(ctx, oid, rulesJSON)
 	if err != nil {
+		if errors.Is(err, core.ErrNotFound) {
+			return nil, fmt.Errorf("%w: origin %d", core.ErrNotFound, oid)
+		}
 		if errors.Is(err, repository.ErrScanAlreadyRunning) {
-			return nil, fmt.Errorf("%w: an active origin scan exist %d", ErrAlreadyExists, oid)
+			return nil, fmt.Errorf("%w: an active origin scan exist %d", core.ErrAlreadyExists, oid)
 		}
 		slog.ErrorContext(ctx, "failed to create scan origin", "origin_id", oid, "error", err)
 		return nil, err
@@ -124,7 +120,7 @@ func (s *BlobService) NewScanOrigin(ctx context.Context, oid uint, rules *reposi
 func (s *BlobService) CancelScanOrigin(ctx context.Context, originID uint) (*repository.ScanOrigin, error) {
 	scan, err := s.repo.GetScanOrigin(ctx, originID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: scan for origin %d", ErrNotFound, originID)
+		return nil, fmt.Errorf("%w: scan for origin %d", core.ErrNotFound, originID)
 	}
 
 	if scan.Status == repository.StatusCompleted || scan.Status == repository.StatusFailed || scan.Status == repository.StatusCancelled {

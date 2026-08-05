@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/UnivocalX/odessa/internal/config"
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/UnivocalX/odessa/internal/repository"
 	"github.com/UnivocalX/odessa/internal/server"
 	"github.com/UnivocalX/odessa/internal/service"
@@ -70,7 +70,7 @@ func run(cmd *cobra.Command, args []string) error {
 		slog.Warn("default administrator created; save these credentials", "email", service.DefaultAdminEmail, "password", password)
 	}
 
-	if err := config.ConfigureStorage(cfg.Storage); err != nil {
+	if err := core.ConfigureStorage(cfg.Storage); err != nil {
 		return fmt.Errorf("configure storage: %w", err)
 	}
 

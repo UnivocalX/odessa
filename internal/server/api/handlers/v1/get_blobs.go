@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/UnivocalX/odessa/internal/repository"
 	"github.com/UnivocalX/odessa/internal/server/api/utils"
 	"github.com/UnivocalX/odessa/internal/service"
@@ -18,7 +19,7 @@ func HandleGetBlob(svc *service.BlobService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hash := r.PathValue("hash")
 		if hash == "" {
-			utils.HandleError(w, r, fmt.Errorf("%w: missing blob hash", service.ErrValidation))
+			utils.HandleError(w, r, fmt.Errorf("%w: missing blob hash", core.ErrValidation))
 			return
 		}
 

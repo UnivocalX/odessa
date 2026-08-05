@@ -4,16 +4,17 @@ import (
 	"context"
 	"time"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"gorm.io/gorm"
 )
 
 type User struct {
 	gorm.Model
 
-	Name         string `gorm:"not null" validate:"required,min=2,max=100"`
-	Email        string `gorm:"not null;uniqueIndex" validate:"required,email"`
-	Password     Secret `gorm:"not null" validate:"required,min=8"`
-	Role         string `gorm:"not null;default:user" validate:"required,oneof=user admin"`
+	Name         string      `gorm:"not null" validate:"required,min=2,max=100"`
+	Email        string      `gorm:"not null;uniqueIndex" validate:"required,email"`
+	Password     core.Secret `gorm:"not null" validate:"required,min=8"`
+	Role         string      `gorm:"not null;default:user" validate:"required,oneof=user admin"`
 	DisabledAt   *time.Time
 	TokenVersion int `gorm:"not null;default:0"`
 }
@@ -27,7 +28,7 @@ func (r *Repository) CreateUser(
 	ctx context.Context,
 	name string,
 	email string,
-	password Secret,
+	password core.Secret,
 	role string,
 ) (*User, error) {
 	user := &User{
@@ -43,7 +44,7 @@ func (r *Repository) CreateUser(
 
 	if err := gorm.G[User](r.DB).Create(ctx, user); err != nil {
 		if isDuplicateKeyError(err) {
-			return nil, ErrAlreadyExists
+			return nil, core.ErrAlreadyExists
 		}
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func (r *Repository) DeleteUser(ctx context.Context, id uint) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return ErrNotFound
+		return core.ErrNotFound
 	}
 	return nil
 }

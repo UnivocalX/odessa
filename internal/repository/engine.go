@@ -46,7 +46,7 @@ func (r *Repository) Close() error {
 	}
 	if r.DB != nil {
 		if sqlDB, err := r.DB.DB(); err == nil {
-			if err := sqlDB.Close(); err != nil && firstErr == nil {
+			if err := sqlDB.Close(); err != nil {
 				firstErr = err
 			}
 		}

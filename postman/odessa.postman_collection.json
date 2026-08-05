@@ -629,7 +629,14 @@
             "url": {
               "raw": "{{base_url}}/api/v1/datasets/{{dataset_id}}/versions/{{dataset_version_id}}",
               "host": ["{{base_url}}"],
-              "path": ["api", "v1", "datasets", "{{dataset_id}}", "versions", "{{dataset_version_id}}"]
+              "path": [
+                "api",
+                "v1",
+                "datasets",
+                "{{dataset_id}}",
+                "versions",
+                "{{dataset_version_id}}"
+              ]
             }
           }
         }

@@ -4,23 +4,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/UnivocalX/odessa/internal/config"
-	"github.com/UnivocalX/odessa/internal/repository"
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/spf13/cobra"
 )
 
 type Config struct {
-	DSN             repository.Secret    `mapstructure:"dsn" validate:"required"`
-	PollInterval    time.Duration        `mapstructure:"poll_interval"`
-	MaxPollInterval time.Duration        `mapstructure:"max_poll_interval"`
-	Concurrency     int                  `mapstructure:"concurrency" validate:"gt=0"`
-	MaxAttempts     int                  `mapstructure:"max_attempts" validate:"gt=0"`
-	DrainTimeout    time.Duration        `mapstructure:"drain_timeout"`
-	Storage         config.StorageConfig `mapstructure:"storage"`
+	DSN             core.Secret        `mapstructure:"dsn" validate:"required"`
+	PollInterval    time.Duration      `mapstructure:"poll_interval"`
+	MaxPollInterval time.Duration      `mapstructure:"max_poll_interval"`
+	Concurrency     int                `mapstructure:"concurrency" validate:"gt=0"`
+	MaxAttempts     int                `mapstructure:"max_attempts" validate:"gt=0"`
+	DrainTimeout    time.Duration      `mapstructure:"drain_timeout"`
+	Storage         core.StorageConfig `mapstructure:"storage"`
 }
 
 func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
-	v := config.NewViper()
+	v := core.NewViper()
 
 	v.SetDefault("dsn", "")
 	v.SetDefault("poll_interval", 5*time.Second)
@@ -29,7 +28,7 @@ func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
 	v.SetDefault("max_attempts", 3)
 	v.SetDefault("drain_timeout", 30*time.Second)
 
-	if err := config.ReadConfigFile(v, cfgFile); err != nil {
+	if err := core.ReadConfigFile(v, cfgFile); err != nil {
 		return Config{}, err
 	}
 
@@ -45,7 +44,7 @@ func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
 	bindFlag("max_attempts", "max-attempts")
 	bindFlag("drain_timeout", "drain-timeout")
 
-	config.BindStorageFlags(v, cmd)
+	core.BindStorageFlags(v, cmd)
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {

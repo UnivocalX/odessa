@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/UnivocalX/odessa/internal/service"
 	"github.com/UnivocalX/odessa/pkg/dto"
 )
@@ -60,19 +61,19 @@ func RespondConflict(w http.ResponseWriter, r *http.Request, e error) {
 }
 
 func HandleError(w http.ResponseWriter, r *http.Request, err error) {
-	slog.ErrorContext(r.Context(), "error", err)
+	slog.ErrorContext(r.Context(), "error", "err", err)
 
 	switch {
-	case errors.Is(err, service.ErrNotFound):
+	case errors.Is(err, core.ErrNotFound):
 		Respond(w, r, http.StatusNotFound, dto.ErrorResponse{
 			Response: dto.Response{Message: "not found"},
 			Error:    err.Error(),
 		})
 	case errors.Is(err, service.ErrUnsupportedBackend):
 		RespondBadRequest(w, r, err)
-	case errors.Is(err, service.ErrValidation):
+	case errors.Is(err, core.ErrValidation):
 		RespondBadRequest(w, r, err)
-	case errors.Is(err, service.ErrAlreadyExists):
+	case errors.Is(err, core.ErrAlreadyExists):
 		RespondConflict(w, r, err)
 	case errors.Is(err, service.ErrCannotCancel):
 		RespondConflict(w, r, err)

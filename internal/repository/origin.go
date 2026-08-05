@@ -6,7 +6,7 @@ import (
 
 	"encoding/json"
 
-	"github.com/UnivocalX/odessa/internal/storage"
+	"github.com/UnivocalX/odessa/internal/core"
 	"gorm.io/gorm"
 )
 
@@ -15,7 +15,7 @@ import (
 type Origin struct {
 	gorm.Model
 
-	URI   storage.URI     `gorm:"not null;uniqueIndex" validate:"required,storage_uri"`
+	URI   core.URI        `gorm:"not null;uniqueIndex" validate:"required,url"`
 	Rules json.RawMessage `gorm:"type:jsonb;not null;default:'{}'" validate:"json"`
 }
 
@@ -25,7 +25,7 @@ func (r *Repository) CreateOrigin(ctx context.Context, uri string, rules json.Ra
 	}
 
 	origin := &Origin{
-		URI:   storage.URI(uri),
+		URI:   core.URI(uri),
 		Rules: rules,
 	}
 
@@ -35,7 +35,7 @@ func (r *Repository) CreateOrigin(ctx context.Context, uri string, rules json.Ra
 
 	err := gorm.G[Origin](r.DB).Create(ctx, origin)
 	if err != nil && isDuplicateKeyError(err) {
-		return nil, ErrAlreadyExists
+		return nil, core.ErrAlreadyExists
 	}
 
 	return origin, err
@@ -122,6 +122,9 @@ func (r *Repository) CreateScanOrigin(ctx context.Context, originID uint, rules 
 	if err := r.DB.WithContext(ctx).Create(scan).Error; err != nil {
 		if isUniqueViolation(err, "idx_scan_origins_active_origin") {
 			return nil, fmt.Errorf("%w: origin %d", ErrScanAlreadyRunning, originID)
+		}
+		if isForeignKeyViolation(err, "fk_scan_origins_origin") {
+			return nil, fmt.Errorf("%w: origin %d", core.ErrNotFound, originID)
 		}
 		return nil, err
 	}

@@ -3,18 +3,7 @@ package storage
 import (
 	"context"
 	"io"
-	"net/url"
 )
-
-// URI is a storage location routed to a backend by its scheme.
-//
-// Supported schemes:
-//   - file:// – local filesystem (fs backend)
-//   - s3://   – AWS S3 or S3-compatible storage
-//   - az://   – Azure Blob Storage
-type URI string
-
-func (u URI) Parse() (*url.URL, error) { return url.Parse(string(u)) }
 
 // Store is the backend-agnostic interface for object storage.
 // All backends (local, S3, Azure) implement this interface so callers

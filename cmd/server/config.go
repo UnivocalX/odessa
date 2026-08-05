@@ -4,17 +4,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/UnivocalX/odessa/internal/config"
-	"github.com/UnivocalX/odessa/internal/repository"
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/spf13/cobra"
 )
 
 type Config struct {
-	DSN     repository.Secret    `mapstructure:"dsn" validate:"required"`
-	HTTP    HTTPConfig           `mapstructure:"http" validate:"required"`
-	Storage config.StorageConfig `mapstructure:"storage"`
-	Auth    AuthConfig           `mapstructure:"auth" validate:"required"`
-	Email   EmailConfig          `mapstructure:"email"`
+	DSN     core.Secret        `mapstructure:"dsn" validate:"required"`
+	HTTP    HTTPConfig         `mapstructure:"http" validate:"required"`
+	Storage core.StorageConfig `mapstructure:"storage"`
+	Auth    AuthConfig         `mapstructure:"auth" validate:"required"`
+	Email   EmailConfig        `mapstructure:"email"`
 }
 
 type HTTPConfig struct {
@@ -28,11 +27,11 @@ type HTTPConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret            repository.Secret `mapstructure:"jwt_secret" validate:"required,min=32"`
-	AccessTokenLifetime  time.Duration     `mapstructure:"access_token_lifetime" validate:"gt=0"`
-	RefreshTokenLifetime time.Duration     `mapstructure:"refresh_token_lifetime" validate:"gt=0"`
-	ResetTokenLifetime   time.Duration     `mapstructure:"reset_token_lifetime" validate:"gt=0"`
-	PasswordResetURL     string            `mapstructure:"password_reset_url"`
+	JWTSecret            core.Secret   `mapstructure:"jwt_secret" validate:"required,min=32"`
+	AccessTokenLifetime  time.Duration `mapstructure:"access_token_lifetime" validate:"gt=0"`
+	RefreshTokenLifetime time.Duration `mapstructure:"refresh_token_lifetime" validate:"gt=0"`
+	ResetTokenLifetime   time.Duration `mapstructure:"reset_token_lifetime" validate:"gt=0"`
+	PasswordResetURL     string        `mapstructure:"password_reset_url"`
 }
 
 type EmailConfig struct {
@@ -40,18 +39,18 @@ type EmailConfig struct {
 }
 
 type SMTPConfig struct {
-	Host     string            `mapstructure:"host"`
-	Port     int               `mapstructure:"port"`
-	Username string            `mapstructure:"username"`
-	Password repository.Secret `mapstructure:"password"`
-	From     string            `mapstructure:"from"`
+	Host     string      `mapstructure:"host"`
+	Port     int         `mapstructure:"port"`
+	Username string      `mapstructure:"username"`
+	Password core.Secret `mapstructure:"password"`
+	From     string      `mapstructure:"from"`
 }
 
 // loadConfig builds a Config by merging:
 //
 // flags > environment > config file > defaults
 func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
-	v := config.NewViper()
+	v := core.NewViper()
 
 	v.SetDefault("dsn", "")
 	v.SetDefault("auth.jwt_secret", "")
@@ -67,7 +66,7 @@ func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
 	v.SetDefault("http.max_header_bytes", 1<<20)
 	v.SetDefault("http.max_request_body_bytes", 1<<20)
 
-	if err := config.ReadConfigFile(v, cfgFile); err != nil {
+	if err := core.ReadConfigFile(v, cfgFile); err != nil {
 		return Config{}, err
 	}
 
@@ -82,7 +81,7 @@ func loadConfig(cmd *cobra.Command, cfgFile string) (Config, error) {
 	bindFlag("auth.jwt_secret", "jwt-secret")
 
 	// Storage flags.
-	config.BindStorageFlags(v, cmd)
+	core.BindStorageFlags(v, cmd)
 
 	var cfg Config
 

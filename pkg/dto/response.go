@@ -92,4 +92,21 @@ type DatasetResponse struct {
 	ID          uint   `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	CreatedAt   string `json:"created_at,omitempty"`
+}
+
+type ListDatasetsResponse struct {
+	Datasets []DatasetResponse `json:"datasets"`
+}
+
+type DatasetVersionResponse struct {
+	ID        uint   `json:"id"`
+	DatasetID uint   `json:"dataset_id"`
+	Commit    string `json:"commit"`
+	CreatedAt string `json:"created_at"`
+	BlobIDs   []uint `json:"blob_ids,omitempty"`
+}
+
+type ListDatasetVersionsResponse struct {
+	Versions []DatasetVersionResponse `json:"versions"`
 }

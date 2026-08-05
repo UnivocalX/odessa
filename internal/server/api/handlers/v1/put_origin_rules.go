@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/UnivocalX/odessa/internal/core"
 	"github.com/UnivocalX/odessa/internal/server/api/utils"
 	"github.com/UnivocalX/odessa/internal/service"
 	"github.com/UnivocalX/odessa/pkg/dto"
@@ -17,13 +18,13 @@ func HandlePutOriginRules(svc *service.BlobService) http.HandlerFunc {
 		rawID := r.PathValue("id")
 		if rawID == "" {
 			slog.WarnContext(r.Context(), "missing origin id in path")
-			utils.HandleError(w, r, fmt.Errorf("%w: missing origin id", service.ErrValidation))
+			utils.HandleError(w, r, fmt.Errorf("%w: missing origin id", core.ErrValidation))
 			return
 		}
 
 		oid, err := strconv.ParseUint(rawID, 10, 64)
 		if err != nil {
-			utils.HandleError(w, r, fmt.Errorf("%w: invalid origin id", service.ErrValidation))
+			utils.HandleError(w, r, fmt.Errorf("%w: invalid origin id", core.ErrValidation))
 			return
 		}
 
