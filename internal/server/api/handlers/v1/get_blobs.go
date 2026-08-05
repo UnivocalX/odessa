@@ -48,12 +48,18 @@ func HandleListBlobs(svc *service.BlobService) http.HandlerFunc {
 			HasMore:    result.HasMore,
 		}
 		for i, b := range result.Blobs {
+			// attributes
 			blob := dto.BlobResponse{
 				ID:       b.ID,
 				Hash:     b.Hash,
 				MimeType: b.MimeType,
 				Size:     b.Size,
 			}
+			// storage locations
+			for _, l := range b.Locations {
+				blob.Locations = append(blob.Locations, string(l.URI))
+			}
+			// labels
 			for _, bl := range b.Labels {
 				blob.Labels = append(blob.Labels, dto.BlobLabelResponse{
 					Name:  bl.Label.Name,

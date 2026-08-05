@@ -64,11 +64,17 @@ type ListLabelsResponse struct {
 }
 
 type BlobResponse struct {
-	ID       uint                `json:"id"`
-	Hash     string              `json:"hash"`
-	MimeType string              `json:"mime_type"`
-	Size     int64               `json:"size"`
-	Labels   []BlobLabelResponse `json:"labels,omitempty"`
+	ID        uint                `json:"id"`
+	Hash      string              `json:"hash"`
+	MimeType  string              `json:"mime_type"`
+	Size      int64               `json:"size"`
+	Labels    []BlobLabelResponse `json:"labels,omitempty"`
+	Locations []string            `json:"locations,omitempty"`
+}
+
+type LocationResponse struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 type BlobLabelResponse struct {

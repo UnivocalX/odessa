@@ -23,7 +23,7 @@ type Location struct {
 	gorm.Model
 
 	BlobID uint        `gorm:"not null;index"`
-	URI    storage.URI `gorm:"not null" validate:"required,storage_uri"`
+	URI    storage.URI `gorm:"not null;uniqueIndex:idx_locations_uri" validate:"required,storage_uri"`
 }
 
 // BlobBatchCreateInput represents a discovered file to be persisted.
@@ -69,7 +69,10 @@ func (r *Repository) BatchCreateBlobs(ctx context.Context, inputs []BlobBatchCre
 				BlobID: blob.ID,
 				URI:    storage.URI(in.URI),
 			}
-			if err := tx.Create(&loc).Error; err != nil {
+			if err := tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "uri"}},
+				DoUpdates: clause.AssignmentColumns([]string{"blob_id", "updated_at"}),
+			}).Create(&loc).Error; err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, fmt.Sprintf("%s: create location: %v", in.URI, err))
 				continue
