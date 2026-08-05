@@ -88,7 +88,7 @@ const (
 type ScanOrigin struct {
 	gorm.Model
 
-	OriginID uint            `gorm:"not null;index"` // was: uniqueIndex
+	OriginID uint            `gorm:"not null;index"  validate:"required"` // was: uniqueIndex
 	Status   Status          `gorm:"type:text;not null;default:'pending'" validate:"required,oneof=pending in_progress completed failed cancelled"`
 	Attempts int             `gorm:"not null;default:0"`
 	Rules    json.RawMessage `gorm:"column:rules;type:jsonb;not null;default:'{}'" validate:"json"`

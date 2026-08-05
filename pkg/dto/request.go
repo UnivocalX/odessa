@@ -14,8 +14,8 @@ type PostBlobRequest struct {
 }
 
 type PostLabelRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
+	Name        string `json:"name" validate:"required,min=2,max=64"`
+	Description string `json:"description" validate:"max=255"`
 }
 
 type PostScanOriginRequest struct {
@@ -59,14 +59,30 @@ type PasswordResetConfirmRequest struct {
 	Password repository.Secret `json:"password" validate:"required,min=8,max=72"`
 }
 
-type SearchBlobsRequest struct {
+type BlobFilter struct {
 	Hashes      []string          `json:"hashes,omitempty"`
 	MimeTypes   []string          `json:"mime_types,omitempty"`
 	Labels      []string          `json:"labels,omitempty"`
 	LabelValues map[string]string `json:"label_values,omitempty"`
 	URIPattern  string            `json:"uri_pattern,omitempty"`
-	MinSize     *int64            `json:"min_size,omitempty"`
-	MaxSize     *int64            `json:"max_size,omitempty"`
-	Cursor      uint              `json:"cursor,omitempty"`
-	Limit       int               `json:"limit,omitempty" validate:"omitempty,min=1,max=100"`
+}
+
+type SearchBlobsRequest struct {
+	Include BlobFilter `json:"include,omitempty"`
+	Exclude BlobFilter `json:"exclude,omitempty"`
+
+	MinSize *int64 `json:"min_size,omitempty"`
+	MaxSize *int64 `json:"max_size,omitempty"`
+
+	Cursor uint `json:"cursor,omitempty"`
+	Limit  int  `json:"limit,omitempty" validate:"omitempty,min=1,max=100"`
+}
+
+type PostDatasetRequest struct {
+	Name        string `json:"name" validate:"required,min=2,max=64"`
+	Description string `json:"description" validate:"max=255"`
+}
+
+type PostDatasetVersionRequest struct {
+	Commit string `json:"description" validate:"max=255"`
 }

@@ -212,7 +212,7 @@ func (h *ScanOriginHandler) startCancelWatcher(scanID uint, cancel context.Cance
 // and records them in the results. Each error is logged individually so
 // failures are visible in the worker's log output.
 func collectScanErrors(results *ScanResults, err error) {
-	var scanErr *MultiError
+	var scanErr *repository.MultiError
 	if !errors.As(err, &scanErr) {
 		return
 	}
@@ -322,7 +322,7 @@ func ScanOriginPipeline(ctx context.Context, reg *storage.Registry, uri string) 
 	})
 
 	if len(errs) > 0 {
-		return results, &MultiError{Errs: errs}
+		return results, &repository.MultiError{Errs: errs}
 	}
 	return results, nil
 }

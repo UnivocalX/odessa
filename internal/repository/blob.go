@@ -22,7 +22,7 @@ type Blob struct {
 type Location struct {
 	gorm.Model
 
-	BlobID uint        `gorm:"not null;index"`
+	BlobID uint        `gorm:"not null;index" validate:"required"`
 	URI    storage.URI `gorm:"not null;uniqueIndex:idx_locations_uri" validate:"required,storage_uri"`
 }
 

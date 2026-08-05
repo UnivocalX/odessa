@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -20,12 +21,30 @@ func WithHashes(hashes ...string) SearchOption {
 	}
 }
 
+func WithoutHashes(hashes ...string) SearchOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(hashes) == 0 {
+			return db
+		}
+		return db.Where("blobs.hash NOT IN ?", hashes)
+	}
+}
+
 func WithMimeTypes(types ...string) SearchOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if len(types) == 0 {
 			return db
 		}
 		return db.Where("blobs.mime_type IN ?", types)
+	}
+}
+
+func WithoutMimeTypes(types ...string) SearchOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(types) == 0 {
+			return db
+		}
+		return db.Where("blobs.mime_type NOT IN ?", types)
 	}
 }
 
@@ -41,6 +60,24 @@ func WithLabels(names ...string) SearchOption {
 			Group("blob_labels.blob_id").
 			Having("COUNT(DISTINCT labels.name) = ?", len(names))
 		return db.Where("blobs.id IN (?)", sub)
+	}
+}
+
+func WithoutLabels(names ...string) SearchOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(names) == 0 {
+			return db
+		}
+
+		sub := db.Session(&gorm.Session{NewDB: true}).
+			Model(&BlobLabel{}).
+			Select("blob_labels.blob_id").
+			Joins("JOIN labels ON labels.id = blob_labels.label_id").
+			Where("labels.name IN ?", names).
+			Group("blob_labels.blob_id").
+			Having("COUNT(DISTINCT labels.name) = ?", len(names))
+
+		return db.Where("blobs.id NOT IN (?)", sub)
 	}
 }
 
@@ -73,6 +110,35 @@ func WithLabelValues(kv map[string]string) SearchOption {
 	}
 }
 
+func WithoutLabelValues(kv map[string]string) SearchOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if len(kv) == 0 {
+			return db
+		}
+
+		sub := db.Session(&gorm.Session{NewDB: true}).
+			Model(&BlobLabel{}).
+			Select("blob_labels.blob_id")
+
+		var conditions []string
+		var args []any
+
+		for name, value := range kv {
+			conditions = append(conditions, "(labels.name = ? AND blob_labels.value = ?)")
+			args = append(args, name, value)
+		}
+
+		orClause := strings.Join(conditions, " OR ")
+
+		sub = sub.Joins("JOIN labels ON labels.id = blob_labels.label_id").
+			Where(orClause, args...).
+			Group("blob_labels.blob_id").
+			Having("COUNT(DISTINCT labels.name) = ?", len(kv))
+
+		return db.Where("blobs.id NOT IN (?)", sub)
+	}
+}
+
 func WithURIPattern(pattern string) SearchOption {
 	return func(db *gorm.DB) *gorm.DB {
 		if pattern == "" {
@@ -81,6 +147,21 @@ func WithURIPattern(pattern string) SearchOption {
 		sub := db.Session(&gorm.Session{NewDB: true}).
 			Model(&Location{}).Select("blob_id").Where("uri LIKE ?", pattern)
 		return db.Where("blobs.id IN (?)", sub)
+	}
+}
+
+func WithoutURIPattern(pattern string) SearchOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if pattern == "" {
+			return db
+		}
+
+		sub := db.Session(&gorm.Session{NewDB: true}).
+			Model(&Location{}).
+			Select("blob_id").
+			Where("uri LIKE ?", pattern)
+
+		return db.Where("blobs.id NOT IN (?)", sub)
 	}
 }
 

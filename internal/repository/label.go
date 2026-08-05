@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -10,8 +11,14 @@ import (
 type Label struct {
 	gorm.Model
 
-	Name        string `gorm:"not null;uniqueIndex"        validate:"required"`
-	Description string `gorm:"not null;default:''"         validate:""`
+	Name string `gorm:"type:varchar(64);not null;uniqueIndex" validate:"required,min=2,max=64"`
+	Description string `gorm:"type:varchar(255);not null;default:''" validate:"max=255"`
+}
+
+// normalize fields
+func (m *Label) BeforeSave(tx *gorm.DB) error {
+	m.Name = strings.TrimSpace(strings.ToLower(m.Name))
+	return nil
 }
 
 type BlobLabel struct {

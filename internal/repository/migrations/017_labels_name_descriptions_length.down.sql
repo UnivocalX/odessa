@@ -1,0 +1,5 @@
+ALTER TABLE labels
+    ALTER COLUMN name TYPE TEXT;
+
+ALTER TABLE labels
+    ALTER COLUMN description TYPE TEXT;

@@ -1,0 +1,5 @@
+ALTER TABLE labels
+    ALTER COLUMN name TYPE VARCHAR(64);
+
+ALTER TABLE labels
+    ALTER COLUMN description TYPE VARCHAR(512);

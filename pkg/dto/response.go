@@ -87,3 +87,9 @@ type SearchBlobsResponse struct {
 	NextCursor uint           `json:"next_cursor"`
 	HasMore    bool           `json:"has_more"`
 }
+
+type DatasetResponse struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
