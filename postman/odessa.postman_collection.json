@@ -13,7 +13,9 @@
     { "key": "admin_password", "value": "" },
     { "key": "origin_id", "value": "1" },
     { "key": "user_id", "value": "1" },
-    { "key": "blob_hash", "value": "" }
+    { "key": "blob_hash", "value": "" },
+    { "key": "dataset_id", "value": "1" },
+    { "key": "dataset_version_id", "value": "1" }
   ],
   "item": [
     {
@@ -511,6 +513,123 @@
               "raw": "{{base_url}}/api/v1/labels",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "labels"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Datasets",
+      "item": [
+        {
+          "name": "List datasets",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/datasets",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "datasets"]
+            }
+          }
+        },
+        {
+          "name": "Create dataset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create dataset succeeded', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "if (body.id) {",
+                  "  pm.environment.set('dataset_id', String(body.id));",
+                  "  pm.collectionVariables.set('dataset_id', String(body.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"images-dataset\",\n  \"description\": \"dataset for image classification\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/datasets",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "datasets"]
+            }
+          }
+        },
+        {
+          "name": "Create dataset version",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Create dataset version succeeded', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "if (body.id) {",
+                  "  pm.environment.set('dataset_version_id', String(body.id));",
+                  "  pm.collectionVariables.set('dataset_version_id', String(body.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commit\": \"v1-initial\",\n  \"blob_ids\": [1, 2]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/datasets/{{dataset_id}}/versions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "datasets", "{{dataset_id}}", "versions"]
+            }
+          }
+        },
+        {
+          "name": "List dataset versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/datasets/{{dataset_id}}/versions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "datasets", "{{dataset_id}}", "versions"]
+            }
+          }
+        },
+        {
+          "name": "Get dataset version",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/datasets/{{dataset_id}}/versions/{{dataset_version_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "datasets", "{{dataset_id}}", "versions", "{{dataset_version_id}}"]
             }
           }
         }
