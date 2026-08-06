@@ -158,19 +158,36 @@ func HandleGetDatasetVersionBlobs(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
-		slog.InfoContext(r.Context(), "get dataset version", "dataset_id", datasetID, "version_id", versionID)
-		version, err := svc.RetrieveDatasetVersion(r.Context(), uint(datasetID), uint(versionID))
+		query := r.URL.Query()
+		var cursor uint
+		if rawCursor := query.Get("cursor"); rawCursor != "" {
+			c, err := strconv.ParseUint(rawCursor, 10, 64)
+			if err != nil {
+				utils.HandleError(w, r, fmt.Errorf("%w: invalid cursor", core.ErrValidation))
+				return
+			}
+			cursor = uint(c)
+		}
+
+		limit := 100
+		if rawLimit := query.Get("limit"); rawLimit != "" {
+			l, err := strconv.Atoi(rawLimit)
+			if err != nil || l <= 0 {
+				utils.HandleError(w, r, fmt.Errorf("%w: invalid limit", core.ErrValidation))
+				return
+			}
+			limit = l
+		}
+
+		slog.InfoContext(r.Context(), "get dataset version blobs", "dataset_id", datasetID, "version_id", versionID)
+		result, err := svc.ListDatasetVersionBlobs(r.Context(), uint(datasetID), uint(versionID), cursor, limit)
 		if err != nil {
 			utils.HandleError(w, r, err)
 			return
 		}
 
-		slog.InfoContext(r.Context(), "get dataset version success", "dataset_id", datasetID, "version_id", versionID)
-		utils.RespondOK(w, r, dto.DatasetVersionResponse{
-			ID:        version.ID,
-			DatasetID: version.DatasetID,
-			Commit:    version.Commit,
-			CreatedAt: version.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		})
+		resp := buildSearchBlobsResponse(result.Blobs, result.NextCursor, result.HasMore)
+		slog.InfoContext(r.Context(), "get dataset version blobs success", "dataset_id", datasetID, "version_id", versionID, "count", len(resp.Blobs))
+		utils.RespondOK(w, r, resp)
 	}
 }

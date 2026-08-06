@@ -387,7 +387,7 @@ func (h *ScanOriginHandler) applyLabelRules(ctx context.Context, files []fileInf
 
 		// Iterate pages from the generator — each page is processed and
 		// discarded before the next is fetched, keeping memory flat.
-		for blobs, err := range h.repo.SearchBlobs(ctx,
+		for blobs, err := range h.repo.SearchBlobsGenarator(ctx,
 			repository.WithHashes(chunk...),
 			repository.WithLimit(chunkSize),
 		) {

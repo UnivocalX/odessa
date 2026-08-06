@@ -122,11 +122,18 @@ func HandleSearchBlobs(svc *service.BlobService) http.HandlerFunc {
 		if req.MaxSize != nil {
 			opts = append(opts, repository.WithMaxSize(*req.MaxSize))
 		}
-		if req.Cursor > 0 {
-			opts = append(opts, repository.WithCursor(req.Cursor))
+		query := r.URL.Query()
+		if cursor, err := parseUintParam(query, "cursor"); err != nil {
+			utils.RespondBadRequest(w, r, err)
+			return
+		} else if cursor > 0 {
+			opts = append(opts, repository.WithCursor(cursor))
 		}
-		if req.Limit > 0 {
-			opts = append(opts, repository.WithLimit(req.Limit))
+		if limit, err := parseIntParam(query, "limit"); err != nil {
+			utils.RespondBadRequest(w, r, err)
+			return
+		} else if limit > 0 {
+			opts = append(opts, repository.WithLimit(limit))
 		}
 
 		result, err := svc.SearchBlobs(r.Context(), opts...)

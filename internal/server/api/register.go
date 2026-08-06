@@ -76,6 +76,7 @@ func Register(mux *http.ServeMux, authSvc *service.AuthService, blobSvc *service
 	mux.Handle(V1Route(http.MethodGet, "datasets/{id}/versions"), v1handlers.HandleGetDatasetVersions(blobSvc))
 	mux.Handle(V1Route(http.MethodPost, "datasets/{id}/versions"), v1handlers.HandlePostDatasetVersion(blobSvc))
 	mux.Handle(V1Route(http.MethodGet, "datasets/{id}/versions/{version_id}"), v1handlers.HandleGetDatasetVersion(blobSvc))
+	mux.Handle(V1Route(http.MethodGet, "datasets/{id}/versions/{version_id}/blobs"), v1handlers.HandleGetDatasetVersionBlobs(blobSvc))
 
 	// middleware
 	authentication := middleware.AuthenticateRoutes(authSvc)

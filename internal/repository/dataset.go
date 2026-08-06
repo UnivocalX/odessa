@@ -124,35 +124,48 @@ func (r *Repository) GetDatasetVersion(ctx context.Context, datasetID uint, vers
 	return &version, nil
 }
 
-func (r *Repository) GetDatasetVersionBlobs(ctx context.Context, datasetID, versionID uint, cursor uint, limit int) ([]Blob, bool, error) {
-	// Verify the version exists and belongs to the dataset.
+// GetDatasetVersionBlobs returns a paginated list of blobs for a dataset version.
+func (r *Repository) GetDatasetVersionBlobs(ctx context.Context, datasetID uint, versionID uint, cursor uint, limit int) (*BlobSearchResult, error) {
 	var version DatasetVersion
 	if err := r.DB.WithContext(ctx).
+		Select("id").
 		Where("id = ? AND dataset_id = ?", versionID, datasetID).
 		First(&version).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, false, core.ErrNotFound
+			return nil, core.ErrNotFound
 		}
-		return nil, false, err
+		return nil, err
+	}
+
+	if limit <= 0 || limit > 1000 {
+		limit = 100
+	}
+
+	query := r.DB.WithContext(ctx).Model(&Blob{}).
+		Joins("JOIN dataset_version_blobs ON dataset_version_blobs.blob_id = blobs.id").
+		Where("dataset_version_blobs.dataset_version_id = ?", versionID)
+
+	if cursor > 0 {
+		query = query.Where("blobs.id > ?", cursor)
 	}
 
 	var blobs []Blob
-	err := r.DB.WithContext(ctx).
-		Joins("JOIN dataset_version_blobs dvb ON dvb.blob_id = blobs.id").
-		Where("dvb.dataset_version_id = ? AND blobs.id > ?", versionID, cursor).
-		Order("blobs.id ASC").
-		Limit(limit + 1). // fetch one extra to detect HasMore
-		Find(&blobs).Error
-	if err != nil {
-		return nil, false, err
+	if err := query.Order("blobs.id ASC").Limit(limit + 1).
+		Preload("Locations").Preload("Labels").Preload("Labels.Label").
+		Find(&blobs).Error; err != nil {
+		return nil, fmt.Errorf("repository: get dataset version blobs: %w", err)
 	}
 
-	hasMore := len(blobs) > limit
-	if hasMore {
-		blobs = blobs[:limit] // trim the lookahead row
+	result := &BlobSearchResult{}
+	if len(blobs) > limit {
+		result.HasMore = true
+		blobs = blobs[:limit]
 	}
-
-	return blobs, hasMore, nil
+	result.Blobs = blobs
+	if len(blobs) > 0 {
+		result.NextCursor = blobs[len(blobs)-1].ID
+	}
+	return result, nil
 }
 
 // BatchAssociateBlobsToDatasetVersion links many blobs to a dataset version.

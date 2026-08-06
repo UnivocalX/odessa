@@ -196,66 +196,6 @@ func WithLimit(limit int) SearchOption {
 	}
 }
 
-// SearchBlobs returns an iterator that yields pages of blobs matching the
-// given search options. Each iteration yields a batch (up to the configured
-// limit, default 1000). The caller processes each batch before requesting
-// the next, keeping memory usage constant regardless of total result count.
-//
-// Usage:
-//
-//	for blobs, err := range repo.SearchBlobs(ctx, WithHashes("abc")) {
-//	    if err != nil { return err }
-//	    // process blobs batch
-//	}
-func (r *Repository) SearchBlobs(ctx context.Context, opts ...SearchOption) iter.Seq2[[]Blob, error] {
-	return func(yield func([]Blob, error) bool) {
-		db := r.DB.WithContext(ctx).Model(&Blob{})
-		for _, opt := range opts {
-			db = opt(db)
-		}
-
-		limit := 1000
-		if v, ok := db.Get("search:limit"); ok {
-			limit = v.(int)
-		}
-
-		var cursor uint
-		for {
-			query := db.Session(&gorm.Session{})
-			if cursor > 0 {
-				query = query.Where("blobs.id > ?", cursor)
-			}
-
-			var blobs []Blob
-			if err := query.Order("blobs.id ASC").Limit(limit + 1).
-				Preload("Locations").Preload("Labels").Preload("Labels.Label").
-				Find(&blobs).Error; err != nil {
-				yield(nil, fmt.Errorf("repository: search blobs: %w", err))
-				return
-			}
-
-			if len(blobs) == 0 {
-				return
-			}
-
-			hasMore := len(blobs) > limit
-			if hasMore {
-				blobs = blobs[:limit]
-			}
-
-			cursor = blobs[len(blobs)-1].ID
-
-			if !yield(blobs, nil) {
-				return
-			}
-
-			if !hasMore {
-				return
-			}
-		}
-	}
-}
-
 // BlobSearchResult holds a single page of search results.
 type BlobSearchResult struct {
 	Blobs      []Blob `json:"blobs"`
@@ -263,9 +203,9 @@ type BlobSearchResult struct {
 	HasMore    bool   `json:"has_more"`
 }
 
-// SearchBlobsPage returns a single page of blobs matching the given options.
+// SearchBlobs returns a single page of blobs matching the given options.
 // Use WithCursor and WithLimit to control pagination.
-func (r *Repository) SearchBlobsPage(ctx context.Context, opts ...SearchOption) (*BlobSearchResult, error) {
+func (r *Repository) SearchBlobs(ctx context.Context, opts ...SearchOption) (*BlobSearchResult, error) {
 	db := r.DB.WithContext(ctx).Model(&Blob{})
 	for _, opt := range opts {
 		db = opt(db)
@@ -293,4 +233,38 @@ func (r *Repository) SearchBlobsPage(ctx context.Context, opts ...SearchOption) 
 		result.NextCursor = blobs[len(blobs)-1].ID
 	}
 	return result, nil
+}
+
+// SearchBlobsGenarator returns an iterator that yields pages of blobs matching
+// the given search options, automatically paging through all results.
+func (r *Repository) SearchBlobsGenarator(ctx context.Context, opts ...SearchOption) iter.Seq2[[]Blob, error] {
+	return func(yield func([]Blob, error) bool) {
+		cursor := uint(0)
+		for {
+			pageOpts := make([]SearchOption, len(opts))
+			copy(pageOpts, opts)
+			if cursor > 0 {
+				pageOpts = append(pageOpts, WithCursor(cursor))
+			}
+
+			result, err := r.SearchBlobs(ctx, pageOpts...)
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+
+			if len(result.Blobs) == 0 {
+				return
+			}
+
+			if !yield(result.Blobs, nil) {
+				return
+			}
+
+			if !result.HasMore {
+				return
+			}
+			cursor = result.NextCursor
+		}
+	}
 }

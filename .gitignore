@@ -31,3 +31,22 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Flutter
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/build/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# JetBrains
+.idea/
+
+# Windows
+Thumbs.db

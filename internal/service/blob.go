@@ -7,9 +7,9 @@ import (
 	"github.com/UnivocalX/odessa/internal/repository"
 )
 
-// SearchBlobs returns a single page of blobs matching the given search options.
+// SearchBlobs returns a single page of blobs matching the given options.
 func (s *BlobService) SearchBlobs(ctx context.Context, opts ...repository.SearchOption) (*repository.BlobSearchResult, error) {
-	result, err := s.repo.SearchBlobsPage(ctx, opts...)
+	result, err := s.repo.SearchBlobs(ctx, opts...)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to search blobs", "error", err)
 		return nil, err
