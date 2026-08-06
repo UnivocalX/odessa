@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"log/slog"
 
 	"github.com/UnivocalX/odessa/internal/core"
@@ -87,4 +88,40 @@ func (s *BlobService) RetrieveDatasetVersion(ctx context.Context, datasetID uint
 	}
 
 	return version, nil
+}
+
+// RetrieveDatasetVersionBlobs returns an iterator over batches of blobs in a
+// dataset version, transparently paging through the repository under the hood.
+// Each yielded slice is one page (up to pageSize blobs). Iteration stops early
+// (without error) if the consumer breaks out of range.
+func (s *BlobService) RetrieveDatasetVersionBlobs(ctx context.Context, datasetID, versionID uint) iter.Seq2[[]repository.Blob, error] {
+	const pageSize = 100
+
+	return func(yield func([]repository.Blob, error) bool) {
+		var cursor uint
+		for {
+			blobs, hasMore, err := s.repo.GetDatasetVersionBlobs(ctx, datasetID, versionID, cursor, pageSize)
+			if err != nil {
+				if errors.Is(err, core.ErrNotFound) {
+					err = fmt.Errorf("%w: dataset %d version %d", core.ErrNotFound, datasetID, versionID)
+				}
+				yield(nil, err)
+				return
+			}
+
+			if len(blobs) == 0 {
+				return
+			}
+
+			if !yield(blobs, nil) {
+				return // consumer stopped ranging
+			}
+
+			cursor = blobs[len(blobs)-1].ID
+
+			if !hasMore {
+				return
+			}
+		}
+	}
 }

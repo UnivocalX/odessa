@@ -113,9 +113,6 @@ func (r *Repository) ListDatasetVersions(ctx context.Context, datasetID uint) ([
 func (r *Repository) GetDatasetVersion(ctx context.Context, datasetID uint, versionID uint) (*DatasetVersion, error) {
 	var version DatasetVersion
 	if err := r.DB.WithContext(ctx).
-		Preload("Blobs", func(tx *gorm.DB) *gorm.DB {
-			return tx.Order("blobs.id ASC")
-		}).
 		Where("id = ? AND dataset_id = ?", versionID, datasetID).
 		First(&version).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -125,6 +122,37 @@ func (r *Repository) GetDatasetVersion(ctx context.Context, datasetID uint, vers
 	}
 
 	return &version, nil
+}
+
+func (r *Repository) GetDatasetVersionBlobs(ctx context.Context, datasetID, versionID uint, cursor uint, limit int) ([]Blob, bool, error) {
+	// Verify the version exists and belongs to the dataset.
+	var version DatasetVersion
+	if err := r.DB.WithContext(ctx).
+		Where("id = ? AND dataset_id = ?", versionID, datasetID).
+		First(&version).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, false, core.ErrNotFound
+		}
+		return nil, false, err
+	}
+
+	var blobs []Blob
+	err := r.DB.WithContext(ctx).
+		Joins("JOIN dataset_version_blobs dvb ON dvb.blob_id = blobs.id").
+		Where("dvb.dataset_version_id = ? AND blobs.id > ?", versionID, cursor).
+		Order("blobs.id ASC").
+		Limit(limit + 1). // fetch one extra to detect HasMore
+		Find(&blobs).Error
+	if err != nil {
+		return nil, false, err
+	}
+
+	hasMore := len(blobs) > limit
+	if hasMore {
+		blobs = blobs[:limit] // trim the lookahead row
+	}
+
+	return blobs, hasMore, nil
 }
 
 // BatchAssociateBlobsToDatasetVersion links many blobs to a dataset version.

@@ -122,9 +122,47 @@ func HandleGetDatasetVersion(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
-		blobIDs := make([]uint, len(version.Blobs))
-		for i, blob := range version.Blobs {
-			blobIDs[i] = blob.ID
+		slog.InfoContext(r.Context(), "get dataset version success", "dataset_id", datasetID, "version_id", versionID)
+		utils.RespondOK(w, r, dto.DatasetVersionResponse{
+			ID:        version.ID,
+			DatasetID: version.DatasetID,
+			Commit:    version.Commit,
+			CreatedAt: version.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		})
+	}
+}
+
+func HandleGetDatasetVersionBlobs(svc *service.BlobService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rawDatasetID := r.PathValue("id")
+		if rawDatasetID == "" {
+			utils.HandleError(w, r, fmt.Errorf("%w: missing dataset id", core.ErrValidation))
+			return
+		}
+
+		rawVersionID := r.PathValue("version_id")
+		if rawVersionID == "" {
+			utils.HandleError(w, r, fmt.Errorf("%w: missing version id", core.ErrValidation))
+			return
+		}
+
+		datasetID, err := strconv.ParseUint(rawDatasetID, 10, 64)
+		if err != nil {
+			utils.HandleError(w, r, fmt.Errorf("%w: invalid dataset id", core.ErrValidation))
+			return
+		}
+
+		versionID, err := strconv.ParseUint(rawVersionID, 10, 64)
+		if err != nil {
+			utils.HandleError(w, r, fmt.Errorf("%w: invalid version id", core.ErrValidation))
+			return
+		}
+
+		slog.InfoContext(r.Context(), "get dataset version", "dataset_id", datasetID, "version_id", versionID)
+		version, err := svc.RetrieveDatasetVersion(r.Context(), uint(datasetID), uint(versionID))
+		if err != nil {
+			utils.HandleError(w, r, err)
+			return
 		}
 
 		slog.InfoContext(r.Context(), "get dataset version success", "dataset_id", datasetID, "version_id", versionID)
@@ -133,7 +171,6 @@ func HandleGetDatasetVersion(svc *service.BlobService) http.HandlerFunc {
 			DatasetID: version.DatasetID,
 			Commit:    version.Commit,
 			CreatedAt: version.CreatedAt.Format("2006-01-02T15:04:05Z"),
-			BlobIDs:   blobIDs,
 		})
 	}
 }
