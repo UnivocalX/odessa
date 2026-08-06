@@ -72,11 +72,6 @@ type BlobResponse struct {
 	Locations []string            `json:"locations,omitempty"`
 }
 
-type LocationResponse struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
 type BlobLabelResponse struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
