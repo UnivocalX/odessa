@@ -67,6 +67,7 @@ func HandleGetScanOrigin(svc *service.BlobService) http.HandlerFunc {
 			OriginID:  scan.OriginID,
 			Status:    string(scan.Status),
 			Attempts:  scan.Attempts,
+			Results:   scan.Results,
 			CreatedAt: scan.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		})
 	}

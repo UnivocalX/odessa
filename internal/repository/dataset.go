@@ -145,6 +145,11 @@ func (r *Repository) GetDatasetVersionBlobs(ctx context.Context, datasetID uint,
 		Joins("JOIN dataset_version_blobs ON dataset_version_blobs.blob_id = blobs.id").
 		Where("dataset_version_blobs.dataset_version_id = ?", versionID)
 
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("repository: count dataset version blobs: %w", err)
+	}
+
 	if cursor > 0 {
 		query = query.Where("blobs.id > ?", cursor)
 	}
@@ -156,7 +161,7 @@ func (r *Repository) GetDatasetVersionBlobs(ctx context.Context, datasetID uint,
 		return nil, fmt.Errorf("repository: get dataset version blobs: %w", err)
 	}
 
-	result := &BlobSearchResult{}
+	result := &BlobSearchResult{Total: total}
 	if len(blobs) > limit {
 		result.HasMore = true
 		blobs = blobs[:limit]

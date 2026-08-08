@@ -1,0 +1,8 @@
+./get_blobs.go
+./get_datasets.go
+./get_labels.go
+./get_origins.go
+./post_dataset.go
+./post_label.go
+./post_origins.go
+./put_origin_rules.go

@@ -81,6 +81,7 @@ Response:
   "blobs": [
     { "id": 1, "hash": "abc...", "mime_type": "image/png", "size": 4096, "labels": [{"name": "source", "value": "photos"}] }
   ],
+  "total": 1,
   "next_cursor": 1,
   "has_more": false
 }
@@ -256,6 +257,82 @@ storage:
     endpoint: http://storage:9000
 ```
 
+## Flutter desktop client
+
+The desktop client lives in `frontend/` and uses the Odessa API.
+
+### Prerequisites
+
+- Flutter SDK installed and available on PATH
+- A desktop target enabled for your platform (`linux`, `windows`, or `macos`)
+- Odessa API server running (for local dev this is typically `http://localhost:9090`)
+
+Linux (Pop!_OS/Ubuntu) desktop toolchain packages:
+
+```sh
+sudo apt update
+sudo apt install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev mesa-utils
+```
+
+Notes:
+
+- `clang`, `cmake`, and `ninja-build` are required to generate Linux desktop build files.
+- `libgtk-3-dev` is required by Flutter's Linux shell.
+- `mesa-utils` provides `eglinfo` (warning-only, but helpful for diagnostics).
+- Android SDK is not required for Linux desktop builds.
+
+Check setup:
+
+```sh
+flutter doctor
+flutter config --enable-linux-desktop
+flutter config --enable-windows-desktop
+flutter config --enable-macos-desktop
+```
+
+### Run in development
+
+```sh
+cd frontend
+flutter pub get
+flutter run -d linux --dart-define=ODESSA_API_BASE_URL=http://localhost:9090
+```
+
+Notes:
+
+- Replace `linux` with `windows` or `macos` on those platforms.
+- If your API runs elsewhere, change the `ODESSA_API_BASE_URL` value.
+- You can also change API URL at runtime from the app Settings page.
+
+### Build release binaries
+
+Linux:
+
+```sh
+cd frontend
+flutter build linux --release --dart-define=ODESSA_API_BASE_URL=http://localhost:9090
+```
+
+Windows:
+
+```sh
+cd frontend
+flutter build windows --release --dart-define=ODESSA_API_BASE_URL=http://localhost:9090
+```
+
+macOS:
+
+```sh
+cd frontend
+flutter build macos --release --dart-define=ODESSA_API_BASE_URL=http://localhost:9090
+```
+
+Build outputs:
+
+- Linux: `frontend/build/linux/x64/release/bundle/`
+- Windows: `frontend/build/windows/x64/runner/Release/`
+- macOS: `frontend/build/macos/Build/Products/Release/`
+
 ## Authentication lifecycle
 
 There is no public signup endpoint. On startup, if `admin@odessa.com` does not exist, Odessa creates the administrator `admin` with a cryptographically random password and logs the one-time credentials. Save that password immediately and change it after logging in.
@@ -281,5 +358,3 @@ go build -o bin/odessa-server ./cmd/server
 go build -o bin/odessa-worker ./cmd/worker
 ./bin/odessa-worker --config config.yaml
 ```
-
-1. patch scan after cancaltion cant create a new scan

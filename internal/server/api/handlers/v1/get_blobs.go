@@ -37,6 +37,35 @@ func HandleGetBlob(svc *service.BlobService) http.HandlerFunc {
 	}
 }
 
+// HandleGetBlobByID returns a handler that retrieves a single blob by ID.
+func HandleGetBlobByID(svc *service.BlobService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		rawID := r.PathValue("id")
+		if rawID == "" {
+			utils.HandleError(w, r, fmt.Errorf("%w: missing blob id", core.ErrValidation))
+			return
+		}
+
+		id, err := strconv.ParseUint(rawID, 10, 0)
+		if err != nil || id == 0 {
+			utils.HandleError(w, r, fmt.Errorf("%w: invalid blob id", core.ErrValidation))
+			return
+		}
+
+		slog.InfoContext(r.Context(), "get blob by id", "id", id)
+
+		b, err := svc.RetrieveBlob(r.Context(), uint(id))
+		if err != nil {
+			utils.HandleError(w, r, err)
+			return
+		}
+
+		resp := buildBlobResponse(*b)
+		slog.InfoContext(r.Context(), "get blob by id success", "hash", resp.Hash, "id", resp.ID)
+		utils.RespondOK(w, r, resp)
+	}
+}
+
 // HandleListBlobs returns a handler that lists blobs with cursor-based
 // pagination using query parameters.
 func HandleListBlobs(svc *service.BlobService) http.HandlerFunc {
@@ -66,7 +95,7 @@ func HandleListBlobs(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
-		resp := buildSearchBlobsResponse(result.Blobs, result.NextCursor, result.HasMore)
+		resp := buildSearchBlobsResponse(result.Blobs, result.NextCursor, result.HasMore, result.Total)
 		slog.InfoContext(r.Context(), "list blobs success", "count", len(resp.Blobs), "next_cursor", resp.NextCursor, "has_more", resp.HasMore)
 		utils.RespondOK(w, r, resp)
 	}
@@ -122,18 +151,11 @@ func HandleSearchBlobs(svc *service.BlobService) http.HandlerFunc {
 		if req.MaxSize != nil {
 			opts = append(opts, repository.WithMaxSize(*req.MaxSize))
 		}
-		query := r.URL.Query()
-		if cursor, err := parseUintParam(query, "cursor"); err != nil {
-			utils.RespondBadRequest(w, r, err)
-			return
-		} else if cursor > 0 {
-			opts = append(opts, repository.WithCursor(cursor))
+		if req.Cursor > 0 {
+			opts = append(opts, repository.WithCursor(req.Cursor))
 		}
-		if limit, err := parseIntParam(query, "limit"); err != nil {
-			utils.RespondBadRequest(w, r, err)
-			return
-		} else if limit > 0 {
-			opts = append(opts, repository.WithLimit(limit))
+		if req.Limit > 0 {
+			opts = append(opts, repository.WithLimit(req.Limit))
 		}
 
 		result, err := svc.SearchBlobs(r.Context(), opts...)
@@ -142,7 +164,7 @@ func HandleSearchBlobs(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
-		resp := buildSearchBlobsResponse(result.Blobs, result.NextCursor, result.HasMore)
+		resp := buildSearchBlobsResponse(result.Blobs, result.NextCursor, result.HasMore, result.Total)
 		utils.RespondOK(w, r, resp)
 	}
 }
@@ -176,11 +198,12 @@ func parseIntParam(values url.Values, name string) (int, error) {
 	return parsed, nil
 }
 
-func buildSearchBlobsResponse(blobs []repository.Blob, nextCursor uint, hasMore bool) dto.SearchBlobsResponse {
+func buildSearchBlobsResponse(blobs []repository.Blob, nextCursor uint, hasMore bool, total int64) dto.SearchBlobsResponse {
 	resp := dto.SearchBlobsResponse{
 		Blobs:      make([]dto.BlobResponse, len(blobs)),
 		NextCursor: nextCursor,
 		HasMore:    hasMore,
+		Total:      total,
 	}
 
 	for i, b := range blobs {

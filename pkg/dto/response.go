@@ -46,11 +46,12 @@ type ListUsersResponse struct {
 }
 
 type ScanOriginResponse struct {
-	ID        uint   `json:"id"`
-	OriginID  uint   `json:"origin_id"`
-	Status    string `json:"status"`
-	Attempts  int    `json:"attempts"`
-	CreatedAt string `json:"created_at"`
+	ID        uint            `json:"id"`
+	OriginID  uint            `json:"origin_id"`
+	Status    string          `json:"status"`
+	Attempts  int             `json:"attempts"`
+	Results   json.RawMessage `json:"results"`
+	CreatedAt string          `json:"created_at"`
 }
 
 type LabelResponse struct {
@@ -81,6 +82,7 @@ type SearchBlobsResponse struct {
 	Blobs      []BlobResponse `json:"blobs"`
 	NextCursor uint           `json:"next_cursor"`
 	HasMore    bool           `json:"has_more"`
+	Total      int64          `json:"total"`
 }
 
 type DatasetResponse struct {

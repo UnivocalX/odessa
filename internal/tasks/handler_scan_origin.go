@@ -30,9 +30,10 @@ type ScanOriginHandler struct {
 
 // ScanResults is persisted as the scan-origin task's JSON results payload.
 type ScanResults struct {
-	Created int      `json:"created"`
-	Failed  int      `json:"failed"`
-	Errors  []string `json:"errors,omitempty"`
+	Discovered int      `json:"discovered"`
+	Created    int      `json:"created"`
+	Failed     int      `json:"failed"`
+	Errors     []string `json:"errors,omitempty"`
 }
 
 // fileInfo holds the metadata produced by the scan pipeline for a single file.
@@ -133,7 +134,7 @@ func (h *ScanOriginHandler) Handle(ctx context.Context, job Job) (any, error) {
 
 	// Run the scan pipeline: list, hash, and detect MIME types.
 	files, scanErr := ScanOriginPipeline(procCtx, h.reg, string(origin.URI))
-	results := &ScanResults{}
+	results := &ScanResults{Discovered: len(files)}
 	collectScanErrors(results, scanErr)
 
 	if procCtx.Err() != nil {

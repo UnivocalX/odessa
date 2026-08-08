@@ -182,7 +182,7 @@ func WithCursor(cursor uint) SearchOption {
 		if cursor == 0 {
 			return db
 		}
-		return db.Where("blobs.id > ?", cursor)
+		return db.Set("search:cursor", cursor)
 	}
 }
 
@@ -201,6 +201,7 @@ type BlobSearchResult struct {
 	Blobs      []Blob `json:"blobs"`
 	NextCursor uint   `json:"next_cursor"`
 	HasMore    bool   `json:"has_more"`
+	Total      int64  `json:"total"`
 }
 
 // SearchBlobs returns a single page of blobs matching the given options.
@@ -211,19 +212,34 @@ func (r *Repository) SearchBlobs(ctx context.Context, opts ...SearchOption) (*Bl
 		db = opt(db)
 	}
 
+	cursor := uint(0)
+	if v, ok := db.Get("search:cursor"); ok {
+		cursor = v.(uint)
+	}
+
 	limit := 100
 	if v, ok := db.Get("search:limit"); ok {
 		limit = v.(int)
 	}
 
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("repository: count searched blobs: %w", err)
+	}
+
+	pageQuery := db
+	if cursor > 0 {
+		pageQuery = pageQuery.Where("blobs.id > ?", cursor)
+	}
+
 	var blobs []Blob
-	if err := db.Order("blobs.id ASC").Limit(limit + 1).
+	if err := pageQuery.Order("blobs.id ASC").Limit(limit + 1).
 		Preload("Locations").Preload("Labels").Preload("Labels.Label").
 		Find(&blobs).Error; err != nil {
 		return nil, fmt.Errorf("repository: search blobs: %w", err)
 	}
 
-	result := &BlobSearchResult{}
+	result := &BlobSearchResult{Total: total}
 	if len(blobs) > limit {
 		result.HasMore = true
 		blobs = blobs[:limit]

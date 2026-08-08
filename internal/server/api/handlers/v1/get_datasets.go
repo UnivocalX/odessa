@@ -186,7 +186,7 @@ func HandleGetDatasetVersionBlobs(svc *service.BlobService) http.HandlerFunc {
 			return
 		}
 
-		resp := buildSearchBlobsResponse(result.Blobs, result.NextCursor, result.HasMore)
+		resp := buildSearchBlobsResponse(result.Blobs, result.NextCursor, result.HasMore, result.Total)
 		slog.InfoContext(r.Context(), "get dataset version blobs success", "dataset_id", datasetID, "version_id", versionID, "count", len(resp.Blobs))
 		utils.RespondOK(w, r, resp)
 	}

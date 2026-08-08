@@ -1,0 +1,4 @@
+./config.go
+./main.go
+./root.go
+./worker.go
