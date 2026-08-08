@@ -1,8 +1,0 @@
-./auth.go
-./blob.go
-./dataset.go
-./email.go
-./errors.go
-./label.go
-./origin.go
-./service.go

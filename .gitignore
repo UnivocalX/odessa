@@ -50,3 +50,5 @@ frontend/build/
 
 # Windows
 Thumbs.db
+
+.gocache
